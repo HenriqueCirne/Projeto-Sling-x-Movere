@@ -1,0 +1,2 @@
+- [Movimento Gerais project](project_movimento-gerais.md) — Cirne Pneus dashboard, PRD sharded at docs/prd/, no architecture doc yet as of 2026-08-27
+- [Epic 1 status](project_epic-1-status.md) — 5 stories drafted 2026-08-27, pending DB/auth decisions, dependency chain, ERP env var names
