@@ -1,0 +1,21 @@
+// Movimento Gerais — Prisma schema
+//
+// Story 1.1 (fundação): apenas datasource + generator. Nenhuma tabela de negócio
+// é definida aqui ainda — `sales_entries` é escopo da Story 1.3 e os modelos de
+// autenticação (Auth.js / @auth/prisma-adapter) são escopo da Story 1.2.
+//
+// Decisões de arquitetura aplicáveis (docs/architecture/tech-decisions.md):
+// - TD-02: PostgreSQL 16, acesso vendor-neutro exclusivamente via `DATABASE_URL`.
+//   Nenhuma feature proprietária de fornecedor (sem SDK Supabase, sem PostgREST,
+//   sem RLS como mecanismo de autorização) — a portabilidade do banco depende disso.
+// - TD-02: valores monetários DEVEM usar `Decimal` (→ numeric(14,2) no Postgres),
+//   nunca `Float`/`Double`.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}

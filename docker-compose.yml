@@ -1,0 +1,40 @@
+# PostgreSQL 16 para desenvolvimento local (TD-02).
+#
+# O Compose lê automaticamente o `.env` da raiz do repositório — o mesmo arquivo
+# de onde a aplicação lê `DATABASE_URL`. Mantenha os dois em sincronia: os
+# valores abaixo precisam bater com os da connection string.
+#
+# Uso:
+#   npm run db:up      # sobe o banco em background
+#   npm run db:deploy  # aplica as migrações
+#   npm run db:down    # derruba o banco (o volume persiste)
+#
+# Este arquivo é EXCLUSIVO para desenvolvimento. A escolha do Postgres
+# gerenciado de produção é uma pergunta de negócio ainda em aberto (TD-02 / R3).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: movimento-gerais-postgres
+    restart: unless-stopped
+    environment:
+      # Sem defaults propositalmente: nenhuma credencial fica escrita neste
+      # arquivo versionado (NFR4). Se faltar variável, o Compose falha rápido
+      # com uma mensagem clara em vez de subir um banco com senha conhecida.
+      POSTGRES_USER: ${POSTGRES_USER:?defina POSTGRES_USER no .env da raiz}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env da raiz}
+      POSTGRES_DB: ${POSTGRES_DB:?defina POSTGRES_DB no .env da raiz}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  postgres_data:
+    name: movimento-gerais-postgres-data
