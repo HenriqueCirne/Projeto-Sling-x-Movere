@@ -120,6 +120,33 @@ Tentei validar a API pelas fontes públicas. Registro honesto do que aconteceu:
 
 **Mitigação de arquitetura (já aplicável, independente do spike):** a Story 1.4 deve isolar o cliente HTTP atrás de um *anti-corruption layer* — um módulo com contrato Zod próprio, mapeando o payload do ERP para o modelo interno. Assim, uma divergência de campos da API vira mudança em um mapper, não uma refatoração de todos os relatórios.
 
+### 🛑 Atualização (2026-08-31) — Spike executado, BLOQUEIO encontrado
+
+O spike recomendado acima foi executado por @dev com as credenciais reais do `.env`.
+Documento completo: `docs/architecture/api-moveres-contract-spike.md`. Resumo:
+
+- ✅ **Autenticação, paginação e filtro incremental confirmados** — `POST
+  /api/LoginComAmbiente`, parâmetro `pagina`, filtro obrigatório por
+  `emissaoInicial`/`emissaoFinal` + `codigoLoja`.
+- ✅ Endpoints reais descobertos (o Swagger do @architect tentou o grupo `v1`, que não
+  existe — os grupos certos são `movere-api` e `movere-inteligente`, visíveis no
+  `discoveryPaths` do script inline da própria página do Swagger UI).
+- 🛑 **BLOQUEIO:** os arrays de itens de linha (`produtos`) e parcelas (`parcelas`)
+  vêm **sempre vazios** em `/api/NotasFiscaisEmitidas`, e o endpoint dedicado a itens de
+  linha (`/api/NotasFiscaisEmitidasPorEstruturaDeItens`) retorna **zero resultados** —
+  testado em duas janelas de data diferentes, sem exceção. A conta configurada retorna
+  `grupo: "SEM ACESSO"` no login, hipótese mais provável para o bloqueio.
+- **Sem itens de linha, os campos `item`/`familia`/`grupo`/`marca`/`linha` e a
+  quantidade/preço por item (FR3, FR4, FR8, FR9) não são populáveis.** Nenhuma mudança
+  é necessária no schema da Story 1.3 — o problema é de acesso aos dados, não de
+  modelagem.
+
+**Consequência para R2 (tabela de riscos abertos abaixo):** o risco R2 deixa de ser
+"contrato não validado" e passa a ser **"contrato validado, mas acesso a itens de linha
+bloqueado por permissão"** — uma ação humana (verificar com o administrador da conta
+Moveres/suporte por que o grupo é "SEM ACESSO") substitui a necessidade de mais
+investigação técnica. **A Story 1.4 continua bloqueada** até essa ação ser resolvida.
+
 ---
 
 ## TD-04 — Coerência 1.3 × 1.5: Ticket Médio, chave de upsert e devoluções
@@ -212,7 +239,7 @@ A aba `Dados` traz 99 colunas, muito além dos ~15 que os 8 relatórios exigem (
 | # | Questão | Bloqueia | Quem decide |
 |---|---|---|---|
 | R1 | **Ticket Médio é por linha (R$ 438,15) ou por venda (R$ 978,87)?** Hoje a planilha usa por linha; o schema vai suportar ambos | Não bloqueia a 1.5 (paridade prevalece) | Gestor / @po |
-| R2 | **Credenciais e spike da API Moveres** — contrato não validado (campos, paginação, incremento, rate limit) | **BLOQUEIA a Story 1.4** | Stakeholder (acesso) + @dev (spike) |
+| R2 | **Permissão da conta Moveres bloqueia itens de linha/parcelas** (grupo "SEM ACESSO" — spike de 2026-08-31 confirmou paginação/incremento, mas não itens de linha) | **BLOQUEIA a Story 1.4** | Stakeholder (ajustar permissão junto ao Moveres/administrador da conta) |
 | R3 | **Hospedagem** (cloud, Postgres gerenciado ou servidor local da loja) | Não bloqueia a Epic 1 (dev roda em Docker local) | Stakeholder |
 | R4 | **Backfill histórico** — dashboard começa no go-live ou importa histórico anterior a Jul/2026? Muda o volume e o custo do primeiro sync | Afeta escopo da 1.4 | Stakeholder |
 | R5 | **Limites das faixas de Prazo Médio** (FR5) — não documentados em lugar nenhum | Bloqueia Epic 2/3, não a Epic 1 | Gestor / @po |
@@ -224,3 +251,4 @@ A aba `Dados` traz 99 colunas, muito além dos ~15 que os 8 relatórios exigem (
 | Data | Versão | Descrição | Autor |
 |------|--------|-----------|-------|
 | 2026-08-27 | 1.0 | Documento criado: TD-01 a TD-05, desbloqueio técnico da Epic 1. Achados TD-04 baseados em análise dos dados reais de `DOC/Dashboard_Vendas_Jul_Ago_2026.xlsx` | Aria (@architect) |
+| 2026-08-31 | 1.1 | Spike técnico da API Moveres executado (TD-03) — ver `docs/architecture/api-moveres-contract-spike.md`. Autenticação/paginação/incremento confirmados; bloqueio encontrado no acesso a itens de linha e parcelas (grupo de permissão "SEM ACESSO"). R2 atualizado: de "contrato não validado" para "permissão da conta bloqueia itens de linha" — Story 1.4 continua bloqueada até ação do stakeholder junto ao Moveres | Dex (@dev) |
