@@ -1,0 +1,52 @@
+schema: 1
+story: '1.3'
+story_title: 'Modelagem de dados dos lançamentos de venda'
+gate: CONCERNS
+status_reason: 'AC1, AC2 e AC3 verificadas por código e teste estrutural; a migração nunca foi aplicada contra um Postgres real (Docker/WSL ausentes, mesma limitação da 1.1/1.2). Decisão central da story (TD-04b: nenhum UNIQUE em id_lancamento/numero_documento) está correta e bem fundamentada em dado real. Nenhum problema bloqueante de código ou segurança.'
+reviewer: 'Quinn (Test Architect)'
+reviewed_revision: 'commit:df09817'
+updated: '2026-08-31T16:40:00Z'
+
+top_issues:
+  - id: 'TEST-001'
+    severity: medium
+    finding: 'A migração `20260831190000_add_sales_entries` nunca foi aplicada contra um PostgreSQL real (Docker/WSL ausentes, reconfirmado nesta revisão — mesma limitação L1 das Stories 1.1 e 1.2). O caminho "aplica e reverte corretamente" e o smoke test de inserir/consultar um registro real (exigidos literalmente pela Task 5) não foram exercitados. Cobertura substituta: 9 testes estruturais que leem o SQL da migração e o schema do disco e afirmam as ACs deterministicamente — verifiquei que os regexes realmente capturam as colunas/índices esperados (reexecutei `prisma migrate diff` de forma independente e o SQL recomputado bate byte-a-byte com o commitado, exceto o cabeçalho de comentário).'
+    suggested_action: 'Em qualquer máquina com Docker: `npm run db:up && npm run db:deploy`, inserir um registro de exemplo, consultar por cada campo indexado, e reverter a migração (`prisma migrate reset` ou down manual) para confirmar reversibilidade real.'
+
+  - id: 'ARCH-001'
+    severity: low
+    finding: 'Os Dev Notes da story instruem genericamente "permitir nulos em campos cuja origem na API ainda não foi validada" (TD-03 é risco aberto). O @data-engineer fez uma exceção deliberada e bem documentada para 5 campos (`tipo`, `dataEmissao`, `valorTotal`, `quantidade`, `prazoMedio`), marcando-os `NOT NULL` por sustentarem os KPIs centrais somados sobre a coluna inteira. Concordo com a decisão — um `valorTotal` nulo quebraria silenciosamente a paridade do Ticket Médio com a planilha (TD-04 Achado 1, `SUM(U)/COUNTA(A)`) — mas é uma exceção a uma instrução genérica da story, não uma leitura literal dela, e vale registrar explicitamente para o @architect/@po acompanharem quando o spike da API (TD-03) acontecer: se a API não garantir esses 5 campos em 100% dos payloads, a Story 1.4 precisará rejeitar/logar a linha em vez de inserir com valor ausente.'
+    suggested_action: 'Nenhuma ação agora. Revisitar quando o spike técnico da API Moveres (TD-03, recomendado como story própria) confirmar ou não a cobertura desses 5 campos.'
+
+  - id: 'PERF-001'
+    severity: low
+    finding: '`@@index([dataEmissao])` e `@@index([dataEmissao, loja])` coexistem. Em Postgres, o índice composto já serve consultas que filtram só por `dataEmissao` (regra do prefixo mais à esquerda), tornando o índice individual parcialmente redundante — custo extra de escrita/armazenamento, não de correção. Ambos foram pedidos como subtasks explícitas e separadas da Task 4, então não é um erro de implementação.'
+    suggested_action: 'Quando os padrões de consulta reais dos relatórios da Epic 2/3 forem conhecidos, avaliar remover o índice individual de `dataEmissao` se o composto cobrir os casos de uso.'
+
+waiver: { active: false }
+
+evidence:
+  validacoes_reexecutadas_pelo_qa:
+    - command: 'npx prisma validate'
+      result: 'PASS — schema válido'
+    - command: 'npm run lint'
+      result: 'PASS — sem erros'
+    - command: 'npm run typecheck'
+      result: 'PASS — sem erros (packages/web + tsconfig.seed.json)'
+    - command: 'npm test'
+      result: 'PASS — 72 testes / 9 arquivos (9 novos em sales-entries.schema.test.ts)'
+    - command: 'npm run build'
+      result: 'PASS — build de produção OK'
+    - command: 'prisma migrate diff recomputado de forma independente'
+      result: 'PASS — SQL recomputado é idêntico ao commitado (exceto cabeçalho de comentário), confirmando ausência de drift entre schema.prisma e a migração'
+  security_checks:
+    - check: 'campos de dado pessoal (CPF/CNPJ, telefone, data de nascimento) do export de 99 colunas vazaram para o schema?'
+      result: 'NÃO — grep confirma que as únicas ocorrências desses termos são comentários explicando a exclusão (minimização de dados, LGPD)'
+    - check: 'valor_total tem CHECK de positividade que rejeitaria devoluções?'
+      result: 'NÃO — confirmado ausência de CHECK na migração'
+    - check: 'id_lancamento/numero_documento têm UNIQUE (anti-padrão TD-04b)?'
+      result: 'NÃO — confirmado por teste e por leitura direta do SQL'
+  acceptance_criteria:
+    AC1: 'MET — todos os campos de FR1–FR9 mapeados no model SalesEntry, incluindo os 3 campos do TD-04c'
+    AC2: 'MET — migração versionada (20260831190000_add_sales_entries) e extensamente documentada (schema.prisma + migration.sql)'
+    AC3: 'MET (estrutura) / TEST-001 (execução real) — 5 índices presentes e verificados por teste; nunca exercitados contra Postgres real'
