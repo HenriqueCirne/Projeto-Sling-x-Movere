@@ -117,3 +117,119 @@ model VerificationToken {
   @@id([identifier, token])
   @@map("verification_tokens")
 }
+
+// ---------------------------------------------------------------------------
+// Lançamentos de venda — espelho do ERP Moveres Software (Story 1.3, TD-04)
+// ---------------------------------------------------------------------------
+//
+// Tabela única e desnormalizada (mesmo formato "largo" do export de referência
+// `DOC/Dashboard_Vendas_Jul_Ago_2026.xlsx`, aba `Dados`) — os 8 relatórios da
+// Epic 2/3 são consultas de agregação sobre estas colunas, sem necessidade de
+// joins. Persistidos só os ~15 campos que os relatórios usam, não as 99
+// colunas do export completo: o export contém CPF/CNPJ, telefone e data de
+// nascimento do cliente, dados pessoais sob a LGPD que nenhum relatório exige
+// (TD-04, Bônus).
+//
+// NÃO HÁ CHAVE ÚNICA NATURAL DE LINHA no export do ERP (TD-04, Achado 3):
+// nenhuma combinação de colunas identifica uma linha de forma única (709 de
+// 23.724 linhas colidem). `id` é gerado pela aplicação (`cuid`), não derivado
+// do ERP. `idLancamento` e `numeroDocumento` são persistidos como referência/
+// auditoria — NENHUM DOS DOIS tem `@unique`, de propósito: um `@unique`
+// pareceria uma trava de integridade óbvia, mas rejeitaria a maioria das
+// linhas reais e é exatamente o anti-padrão que o TD-04b describe como "o
+// caminho que a leitura ingênua desta story induziria". A estratégia de
+// sincronização idempotente (upsert por chave de linha da API, se existir; ou
+// delete-and-replace por janela `(dataEmissao, loja)`, caso contrário) é
+// decisão da Story 1.4 — este schema só precisa suportar ambas sem alteração.
+//
+// Nulabilidade: os únicos campos NOT NULL são os que a análise de dados real
+// do TD-04 confirma preenchidos em 100% das 23.724 linhas E que sustentam os
+// KPIs centrais somados sobre a coluna inteira (Faturamento, Quantidade,
+// Nº de Lançamentos, Prazo Médio). Todos os demais campos descritivos ficam
+// opcionais: a Story 1.4 consome a API do ERP, não o export analisado, e a
+// cobertura de campos da API é risco explicitamente não validado (TD-03,
+// R2) — um campo ausente num payload da API não pode derrubar o job de sync
+// por violação de NOT NULL.
+model SalesEntry {
+  id String @id @default(cuid())
+
+  /// "Id Lançamento" (col. CF do export) — identifica a TRANSAÇÃO no ERP, não
+  /// a linha (mapeia 1 : N para linhas de item). Ver aviso de unicidade acima.
+  idLancamento String? @map("id_lancamento")
+
+  /// "Nº documento" (col. AU) — TD-04c: existe hoje só para deixar o Ticket
+  /// Médio por venda (em vez de por linha, ver TD-04 Achado 2) calculável a
+  /// qualquer momento sem migração futura. Nenhum relatório da Epic 1 o usa.
+  numeroDocumento String? @map("numero_documento")
+
+  /// "Tipo" (col. A): Venda ou Devolução (TD-04, Achado 4). A planilha de
+  /// referência NÃO filtra devoluções — nem este schema nem nenhuma validação
+  /// futura pode rejeitá-las (`valorTotal` de devolução é negativo).
+  tipo SalesEntryType @default(VENDA)
+
+  /// Data de Emissão do lançamento no ERP — dimensão de filtro universal
+  /// (FR12) e eixo da série temporal de faturamento (FR2).
+  dataEmissao DateTime @map("data_emissao")
+
+  loja       String?
+  cliente    String?
+  atendente  String?
+  item       String?
+  familia    String?
+  grupo      String?
+  marca      String?
+  linha      String?
+
+  /// "Tipo de Preço" — dimensão do cruzamento Tipo de Preço × Loja × Item (FR8).
+  tipoPreco String? @map("tipo_preco")
+
+  /// "Condição de Pagamento" — dimensão de agrupamento do FR6.
+  condicaoPagamento String? @map("condicao_pagamento")
+
+  /// "Preço" (preço unitário do item). Distinto de `valorTotal` (valor total
+  /// da linha) — nenhum FR da Epic 1 soma este campo diretamente, mas a
+  /// story pede o dado.
+  preco Decimal? @db.Decimal(14, 2)
+
+  /// "Total Preço de Venda" (col. U) — a coluna somada em TODOS os KPIs de
+  /// faturamento (FR1, FR2, FR6, FR7, FR8, FR9). TD-02: `Decimal`, nunca
+  /// `Float`. Aceita valores NEGATIVOS (devoluções, TD-04 Achado 4) — nenhuma
+  /// validação futura pode usar `.positive()`/`CHECK (> 0)` aqui.
+  valorTotal Decimal @map("valor_total") @db.Decimal(14, 2)
+
+  /// "Quantidade" (col. N). `Decimal`, não `Int`: a cobertura de campos da
+  /// API ainda não foi validada (TD-03) e uma unidade de medida fracionária
+  /// exigiria migração se o tipo fosse `Int` — `Decimal` já cobre o caso
+  /// inteiro sem custo adicional.
+  quantidade Decimal @db.Decimal(12, 3)
+
+  /// "Prazo Médio" (col. W, preenchido em 100% das linhas — TD-04 Achado 4).
+  /// Persistido BRUTO (dias). As faixas de prazo do FR5 são derivadas na
+  /// camada de consulta/relatório (Epic 2/3) — os limites das faixas não
+  /// estão documentados em lugar nenhum (R5) e essa é uma decisão de negócio
+  /// pendente, não desta story.
+  prazoMedio Int @map("prazo_medio")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // AC3: índices nos campos de filtro/agregação universal (Data de Emissão,
+  // Loja, Cliente, Atendente) + composto (Data de Emissão + Loja), avaliado
+  // pela Task 4 dado o volume de 23.724+ lançamentos/bimestre (NFR2) — é
+  // exatamente o par que FR4/FR12 filtram juntos com mais frequência.
+  @@index([dataEmissao])
+  @@index([loja])
+  @@index([cliente])
+  @@index([atendente])
+  @@index([dataEmissao, loja])
+  @@map("sales_entries")
+}
+
+/// Ver `SalesEntry.tipo` (TD-04, Achado 4). Só dois valores existem no export
+/// de referência — não antecipar um valor não observado nos dados reais.
+enum SalesEntryType {
+  VENDA
+  DEVOLUCAO
+
+  @@map("sales_entry_type")
+}
