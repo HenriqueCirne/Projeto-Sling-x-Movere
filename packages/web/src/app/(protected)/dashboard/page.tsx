@@ -1,27 +1,75 @@
 import type { Metadata } from 'next';
 
+import { KpiCard } from '@/features/dashboard/components/KpiCard';
+import { formatCurrency, formatInteger, periodFilterInputSchema, toPeriodFilter } from '@/features/dashboard';
+import { dashboardKpisService } from '@/features/dashboard/services/dashboard-kpis.service';
+import { PeriodFilterForm } from '@/shared/components/PeriodFilterForm';
+
 export const metadata: Metadata = {
   title: 'Painel — Movimento Gerais',
 };
 
+export const dynamic = 'force-dynamic';
+
 /**
- * Área autenticada (AC2, AC4).
+ * Painel — KPIs de resumo (Story 1.5, AC1/AC2).
  *
- * Placeholder deliberado: o conteúdo do Painel é escopo da Story 1.5. O que esta
- * página entrega hoje é a rota protegida contra a qual o redirecionamento do
- * AC2 e a persistência de sessão do AC4 são verificáveis.
+ * A autenticação (AC3) já está garantida por `app/(protected)/layout.tsx`,
+ * que envolve esta página — não há checagem de sessão aqui de propósito,
+ * para não reimplementar o que a Story 1.2 já resolveu.
+ *
+ * **AC4 (dados vêm da tabela sincronizada) não é verificável nesta sessão de
+ * trabalho:** a Story 1.4 está bloqueada por uma questão de permissão na
+ * conta da API Moveres (ver `docs/architecture/api-moveres-contract-spike.md`).
+ * Esta página consulta `sales_entries` normalmente — funciona corretamente
+ * hoje com 0 linhas (mostra zeros) e passará a mostrar dados reais assim que
+ * o job da 1.4 gravar algo, sem nenhuma mudança de código.
  */
-export default function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+
+  const parsedFilter = periodFilterInputSchema.safeParse({
+    dataInicial: typeof params.dataInicial === 'string' ? params.dataInicial : undefined,
+    dataFinal: typeof params.dataFinal === 'string' ? params.dataFinal : undefined,
+  });
+
+  // Filtro inválido (ex: URL editada à mão com datas invertidas) degrada para
+  // "sem filtro" em vez de quebrar a página — a mesma filosofia do
+  // health-check da Story 1.1 (degradar, não derrubar).
+  const period = parsedFilter.success ? toPeriodFilter(parsedFilter.data) : {};
+
+  const kpis = await dashboardKpisService.getKpis(period);
+
   return (
-    <main className="flex flex-1 items-center justify-center bg-zinc-50 p-6 dark:bg-zinc-950">
-      <section className="w-full max-w-xl rounded-xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+    <main className="flex-1 space-y-6 bg-zinc-50 p-6 dark:bg-zinc-950">
+      <header>
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
           Painel
         </h1>
-        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-          Sessão ativa. Os relatórios comerciais chegam na Story 1.5.
+        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          Resumo do desempenho comercial.
         </p>
-      </section>
+      </header>
+
+      <PeriodFilterForm />
+
+      {!parsedFilter.success && (
+        <p role="alert" className="text-sm text-red-700 dark:text-red-300">
+          Período inválido — exibindo todos os lançamentos.
+        </p>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <KpiCard label="Faturamento Total" value={formatCurrency(kpis.faturamentoTotal)} />
+        <KpiCard label="Quantidade Total" value={formatInteger(kpis.quantidadeTotal)} />
+        <KpiCard label="Nº de Lançamentos" value={formatInteger(kpis.numeroDeLancamentos)} />
+        <KpiCard label="Ticket Médio" value={formatCurrency(kpis.ticketMedio)} />
+        <KpiCard label="Nº de Clientes" value={formatInteger(kpis.numeroDeClientes)} />
+      </div>
     </main>
   );
 }

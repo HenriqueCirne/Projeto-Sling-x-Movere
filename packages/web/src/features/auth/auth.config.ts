@@ -33,6 +33,23 @@ type CredentialsAwareJWT = JWT & { credentials?: boolean };
 const secureCookies = usesSecureCookies();
 
 /**
+ * `AUTH_TRUST_HOST` já existe em `.env`/`.env.example` desde a Story 1.2
+ * ("Deixe `true` ao hospedar fora da Vercel"), mas nunca tinha sido lido em
+ * lugar nenhum — sem isso, toda requisição loga `UntrustedHost` e `auth()`
+ * nunca resolve uma sessão em nenhum host que não seja a própria Vercel
+ * (inclusive `localhost` em dev, e qualquer servidor próprio/Docker atrás de
+ * nginx em produção). Bug pré-existente descoberto ao testar manualmente a
+ * Story 1.5 — extraído como função pura (mesmo padrão de `usesSecureCookies`
+ * em `session-cookie.ts`) para não repetir a lacuna de teste que permitiu o
+ * bug passar despercebido na Story 1.2.
+ */
+export function shouldTrustHost(
+  authTrustHost: string | undefined = process.env.AUTH_TRUST_HOST,
+): boolean {
+  return authTrustHost === 'true';
+}
+
+/**
  * ## Por que a sessão fica no banco mesmo usando Credentials
  *
  * O TD-01 exige sessão em banco (revogação imediata). O Auth.js, porém, recusa
@@ -53,6 +70,8 @@ const secureCookies = usesSecureCookies();
  */
 export const authConfig = {
   adapter: authPrismaAdapter,
+
+  trustHost: shouldTrustHost(),
 
   session: {
     maxAge: SESSION_MAX_AGE_SECONDS,

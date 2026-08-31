@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { authConfig } from './auth.config';
+import { authConfig, shouldTrustHost } from './auth.config';
 import { LOGIN_PATH, SESSION_MAX_AGE_SECONDS, SESSION_UPDATE_AGE_SECONDS } from './auth.contract';
 
 /**
@@ -57,5 +57,28 @@ describe('authConfig', () => {
   it('declara exatamente um provider: Credentials', () => {
     expect(authConfig.providers).toHaveLength(1);
     expect(authConfig.providers[0]?.id).toBe('credentials');
+  });
+});
+
+describe('shouldTrustHost', () => {
+  // Regressão: `AUTH_TRUST_HOST` existia em `.env`/`.env.example` desde a
+  // Story 1.2 mas nunca era lido — sem nenhum teste cobrindo isso, o bug
+  // (toda requisição falhando com `UntrustedHost`) passou despercebido até
+  // ser descoberto manualmente na Story 1.5.
+  it('confia no host apenas quando a variável é exatamente "true"', () => {
+    expect(shouldTrustHost('true')).toBe(true);
+  });
+
+  it('não confia no host quando a variável está vazia ou tem outro valor', () => {
+    // Passar um valor explícito (mesmo `''`) — diferente de `undefined` — não
+    // aciona o parâmetro default, então este teste não depende do
+    // `process.env` real do processo que roda os testes.
+    expect(shouldTrustHost('')).toBe(false);
+    expect(shouldTrustHost('1')).toBe(false);
+    expect(shouldTrustHost('TRUE')).toBe(false);
+  });
+
+  it('authConfig.trustHost é derivado de shouldTrustHost, não hardcoded', () => {
+    expect(authConfig.trustHost).toBe(shouldTrustHost());
   });
 });
