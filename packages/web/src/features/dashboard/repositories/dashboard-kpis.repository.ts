@@ -38,28 +38,31 @@ export class PrismaDashboardKpisRepository implements DashboardKpisRepository {
     };
 
     // Duas idas ao banco, não uma: `aggregate` não faz COUNT(DISTINCT) sobre
-    // uma coluna não-agrupada. `$queryRaw` aqui é SQL portável (COUNT DISTINCT
-    // é padrão ANSI, não recurso proprietário do Postgres) — não fere o TD-02.
-    const [aggregate, distinctClientesResult] = await Promise.all([
+    // uma coluna não-agrupada. `groupBy` (não `$queryRaw`) porque o GROUP BY
+    // ainda roda no Postgres — só o resultado (uma linha por cliente distinto,
+    // ~5 mil linhas no volume de referência do TD-04) volta para o Node, não
+    // a tabela inteira. Deliberadamente NÃO usei SQL cru aqui: sem Docker
+    // nesta máquina, um `$queryRaw` com bind de parâmetros errado só
+    // quebraria quando a Story 1.4 gravasse dado real — `groupBy` é
+    // type-safe e usa o mesmo query builder já exercitado pelo `aggregate`
+    // acima.
+    const [aggregate, distinctClientesGroups] = await Promise.all([
       prisma.salesEntry.aggregate({
         where,
         _sum: { valorTotal: true, quantidade: true },
         _count: { _all: true },
       }),
-      prisma.$queryRaw<{ count: bigint }[]>`
-        SELECT COUNT(DISTINCT cliente) AS count
-        FROM sales_entries
-        WHERE cliente IS NOT NULL
-          AND (${period.dataInicial ?? null}::timestamp IS NULL OR data_emissao >= ${period.dataInicial ?? null})
-          AND (${period.dataFinal ?? null}::timestamp IS NULL OR data_emissao <= ${period.dataFinal ?? null})
-      `,
+      prisma.salesEntry.groupBy({
+        by: ['cliente'],
+        where: { ...where, cliente: { not: null } },
+      }),
     ]);
 
     return {
       faturamentoTotal: aggregate._sum.valorTotal?.toNumber() ?? 0,
       quantidadeTotal: aggregate._sum.quantidade?.toNumber() ?? 0,
       numeroDeLancamentos: aggregate._count._all,
-      numeroDeClientesDistintos: Number(distinctClientesResult[0]?.count ?? 0),
+      numeroDeClientesDistintos: distinctClientesGroups.length,
     };
   }
 }
