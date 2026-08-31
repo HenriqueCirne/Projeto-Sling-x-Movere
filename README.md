@@ -10,6 +10,7 @@ relatórios servidos direto do ERP.
 | Aplicação | Next.js 16 (App Router) + React 19 + TypeScript   |
 | Estilo    | Tailwind CSS 4                                    |
 | Banco     | PostgreSQL 16 (Docker no dev) + Prisma            |
+| Autenticação | Auth.js (NextAuth v5) — Credentials + sessão em banco |
 | Validação | Zod                                               |
 | Testes    | Vitest                                            |
 
@@ -49,13 +50,21 @@ cp .env.example .env
 npm run db:up      # sobe o PostgreSQL 16
 npm run db:deploy  # aplica as migrações
 
-# 4. Aplicação
+# 4. Gestor inicial — preencha AUTH_SECRET, SEED_ADMIN_EMAIL e
+#    SEED_ADMIN_PASSWORD (mínimo 12 caracteres) no .env antes de rodar
+npm run db:seed
+
+# 5. Aplicação
 npm run dev        # http://localhost:3000
 ```
 
 A página inicial é o health-check: mostra o ambiente e o estado da conexão com o banco.
 Sem banco de pé a aplicação **sobe assim mesmo** e reporta `degraded` — a falha é
 diagnosticada, não escondida.
+
+Login em [`/login`](http://localhost:3000/login) com as credenciais semeadas no passo 4.
+Não há cadastro público (NFR3) — `npm run db:seed` é o único caminho para criar um
+gestor, e é idempotente: rodar de novo não recria nem sobrescreve quem já existe.
 
 ## Comandos
 
@@ -70,6 +79,7 @@ diagnosticada, não escondida.
 | `npm run db:down`    | Derruba o PostgreSQL local (volume persiste)  |
 | `npm run db:migrate` | Cria/aplica migração em desenvolvimento       |
 | `npm run db:deploy`  | Aplica migrações pendentes                    |
+| `npm run db:seed`    | Provisiona o gestor inicial (idempotente)     |
 | `npm run db:studio`  | Prisma Studio                                 |
 
 ## Segurança
