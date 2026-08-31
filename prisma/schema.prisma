@@ -1,8 +1,8 @@
 // Movimento Gerais — Prisma schema
 //
-// Story 1.1 (fundação): apenas datasource + generator. Nenhuma tabela de negócio
-// é definida aqui ainda — `sales_entries` é escopo da Story 1.3 e os modelos de
-// autenticação (Auth.js / @auth/prisma-adapter) são escopo da Story 1.2.
+// Story 1.1 (fundação): datasource + generator.
+// Story 1.2 (autenticação): modelos exigidos pelo `@auth/prisma-adapter`.
+// `sales_entries` continua sendo escopo da Story 1.3.
 //
 // Decisões de arquitetura aplicáveis (docs/architecture/tech-decisions.md):
 // - TD-02: PostgreSQL 16, acesso vendor-neutro exclusivamente via `DATABASE_URL`.
@@ -18,4 +18,102 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Autenticação — Auth.js (NextAuth v5) + @auth/prisma-adapter (Story 1.2, TD-01)
+// ---------------------------------------------------------------------------
+//
+// Os NOMES DE CAMPO abaixo são contrato do `@auth/prisma-adapter` e não podem ser
+// renomeados (o adapter consulta `p.user.findUnique({ where: { email } })`,
+// `p.session.findUnique({ where: { sessionToken } })` etc.). Os NOMES DE TABELA e
+// de coluna no banco são livres — usamos `@@map`/`@map` para manter o padrão
+// snake_case do projeto (mesmo padrão de `sales_entries`, Story 1.3).
+//
+// TD-01: a sessão vive no BANCO (não é JWT stateless). Desligar um gestor é
+// deletar a linha em `sessions` — revogação imediata, sem esperar token expirar.
+
+/// Papel do usuário. O MVP tem um único papel (NFR3: acesso restrito à gestão,
+/// sem cadastro público e sem hierarquia de permissões). O campo existe porque a
+/// Story 1.2 pede "papel" no modelo mínimo — não para antecipar papéis futuros.
+enum UserRole {
+  GESTOR
+
+  @@map("user_role")
+}
+
+/// Gestor autorizado. Provisionado exclusivamente por `prisma/seed.ts` (AC5) —
+/// não há rota de cadastro público (NFR3).
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  /// Campo exigido pelo adapter (fluxo de magic link). Não usado no MVP.
+  emailVerified DateTime? @map("email_verified")
+  /// Campo exigido pelo adapter (avatar de provedores OAuth). Não usado no MVP.
+  image         String?
+  /// Hash argon2id da senha (TD-01). NUNCA a senha em texto claro.
+  /// Opcional no schema porque o adapter cria usuários sem senha em fluxos
+  /// não-Credentials; um usuário sem hash simplesmente não consegue autenticar.
+  passwordHash  String?   @map("password_hash")
+  role          UserRole  @default(GESTOR)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  accounts Account[]
+  sessions Session[]
+
+  @@map("users")
+}
+
+/// Vínculo com provedores externos. Exigido pelo `@auth/prisma-adapter`; fica
+/// vazio no MVP, que usa apenas o Credentials provider (TD-01: sem OAuth).
+model Account {
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @map("refresh_token")
+  access_token      String? @map("access_token")
+  expires_at        Int?    @map("expires_at")
+  token_type        String? @map("token_type")
+  scope             String?
+  id_token          String? @map("id_token")
+  session_state     String? @map("session_state")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@map("accounts")
+}
+
+/// Sessão persistida (TD-01: database session strategy).
+/// `sessionToken` é o valor guardado no cookie HttpOnly — nunca exposto ao JS.
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+/// Exigido pelo `@auth/prisma-adapter` (fluxos de e-mail/magic link).
+/// Fica vazio no MVP; existe para satisfazer o contrato do adapter.
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+  @@map("verification_tokens")
 }

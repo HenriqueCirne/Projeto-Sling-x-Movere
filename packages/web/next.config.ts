@@ -21,8 +21,14 @@ loadEnvConfig(monorepoRoot, process.env.NODE_ENV !== 'production');
 
 const nextConfig: NextConfig = {
   // Next.js 16+ substituiu `middleware.ts` pelo sistema de Proxy: redirects,
-  // rewrites e headers ficam centralizados aqui. A checagem de sessão da Story
-  // 1.2 acontece em Server Components / Route Handlers via `auth()`.
+  // rewrites e headers ficam centralizados aqui. A checagem otimista de sessão
+  // vive em `src/proxy.ts`; a autorização real acontece em Server Components
+  // via `auth()` (Story 1.2, TD-01).
+
+  // `@node-rs/argon2` é um addon nativo (`.node`). Empacotá-lo produz um build
+  // que quebra em runtime com "invalid ELF header" ou módulo não encontrado —
+  // mantê-lo externo faz o servidor carregá-lo por `require` normal.
+  serverExternalPackages: ['@node-rs/argon2'],
 };
 
 export default nextConfig;

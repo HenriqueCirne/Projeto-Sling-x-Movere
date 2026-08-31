@@ -21,6 +21,15 @@ const optionalEnvString = z.preprocess(
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   DATABASE_URL: optionalEnvString,
+  /**
+   * Chave de assinatura do Auth.js (Story 1.2, TD-01). Declarada aqui para que
+   * o `.env.example` tenha uma contraparte única e verificável no código.
+   *
+   * Opcional pelo mesmo motivo de `DATABASE_URL`: quem exige a variável é o
+   * próprio Auth.js, no momento em que a autenticação é usada. Torná-la
+   * obrigatória aqui derrubaria também o health-check, que não depende dela.
+   */
+  AUTH_SECRET: optionalEnvString,
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -39,5 +48,6 @@ export function parseEnv(source: EnvSource = process.env): Env {
   return envSchema.parse({
     NODE_ENV: source.NODE_ENV,
     DATABASE_URL: source.DATABASE_URL,
+    AUTH_SECRET: source.AUTH_SECRET,
   });
 }

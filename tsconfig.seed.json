@@ -1,0 +1,23 @@
+{
+  // Typecheck de `prisma/seed.ts`, que roda fora do Next.js (via `tsx`) e por
+  // isso não é coberto pelo `tsc` de `packages/web`. Sem este projeto separado,
+  // um erro de tipo no seed só apareceria em produção, no pior momento
+  // possível: durante o provisionamento do primeiro acesso.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["prisma/seed.ts"]
+}

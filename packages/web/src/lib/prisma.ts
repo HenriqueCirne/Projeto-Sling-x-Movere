@@ -31,3 +31,24 @@ export function getPrismaClient(): PrismaClient {
 
   return client;
 }
+
+/**
+ * Cliente Prisma em forma de referência estável, resolvido preguiçosamente a
+ * cada acesso de propriedade.
+ *
+ * Existe por causa do `@auth/prisma-adapter` (Story 1.2), que recebe o cliente
+ * na CONSTRUÇÃO da configuração do Auth.js — um ponto do módulo em que
+ * `getPrismaClient()` ainda não deve ser chamado, sob pena de reintroduzir
+ * exatamente a instanciação ansiosa que o comentário acima descarta.
+ *
+ * O proxy não guarda estado: quem guarda continua sendo `getPrismaClient()`.
+ */
+export const lazyPrismaClient: PrismaClient = new Proxy({} as PrismaClient, {
+  get(_target, property) {
+    const client = getPrismaClient();
+    // O terceiro argumento (`receiver`) precisa ser o cliente real: os delegates
+    // do Prisma (`client.user`, `client.session`, ...) são getters que dependem
+    // do `this` correto. Passar o proxy aqui quebraria a resolução.
+    return Reflect.get(client, property, client) as unknown;
+  },
+});
