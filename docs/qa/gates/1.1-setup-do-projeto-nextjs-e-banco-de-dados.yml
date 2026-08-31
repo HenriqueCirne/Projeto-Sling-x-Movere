@@ -1,0 +1,78 @@
+schema: 1
+story: '1.1'
+gate: CONCERNS
+status_reason: 'AC1 e AC3 verificadas end-to-end; AC2 entregue mas nunca exercitada contra um Postgres real (Docker ausente) e AC4 permanece não entregue, delegada ao @devops sem artefato de rastreamento. Nenhum problema bloqueante de código ou segurança.'
+reviewer: 'Quinn'
+reviewed_revision: 'commit:1bfe58e'
+updated: '2026-08-27T21:05:00Z'
+
+top_issues:
+  - id: 'TEST-001'
+    severity: medium
+    finding: 'O caminho "conectado" do health-check e a migração `0_init` nunca foram executados contra um PostgreSQL real. Docker não está instalado na máquina (confirmado: `docker`, `docker-compose`, `psql` ausentes; nada escutando em 5432). A cobertura do caminho feliz é 100% mock: `HealthService` é testado com um `DatabaseHealthRepository` falso, e `PrismaDatabaseHealthRepository.ping()` — a única camada que realmente fala com o banco — não tem nenhum teste. O `docker-compose.yml` foi escrito mas jamais subiu.'
+    suggested_action: 'Em qualquer máquina com Docker: `npm run db:up && npm run db:deploy`, confirmar que a página exibe "Operacional"/"Conectado", e registrar a evidência. Idealmente o pipeline da AC4 sobe um serviço Postgres e roda esse caminho como teste de integração.'
+
+  - id: 'REQ-001'
+    severity: medium
+    finding: 'A AC4 (pipeline de CI) não foi entregue. A delegação ao @devops está corretamente documentada (Task 4 desmarcada, Completion Notes, File List, Change Log, TD-05) e `.github/workflows/` de fato não existe — é decisão de governança, não falha do @dev. Porém a story vai para Done com um Acceptance Criterion não cumprido e o único mecanismo que impede a AC4 de ser esquecida é texto em prosa dentro do story file. O próprio TD-05 deixou a decisão para o @po ("mover a AC4 para uma story de @devops ou registrar a delegação explicitamente") e essa decisão nunca foi tomada.'
+    suggested_action: '@po deve resolver o pendente do TD-05 antes de a Epic 1 avançar: mover a AC4 para uma story própria de @devops (recomendado) ou removê-la formalmente do escopo da 1.1. Em paralelo, @devops cria `.github/workflows/ci.yml` com `npm ci`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.'
+
+  - id: 'TEST-002'
+    severity: low
+    finding: 'A seção Testing da própria story exige "smoke test confirmando que a página de health-check renderiza sem erro". Nenhum dos 8 testes renderiza `page.tsx` — são 4 de `parseEnv` e 4 de `HealthService`. O ambiente Vitest é `node` e não há React Testing Library instalada, então o teste de render não era possível sem novas dependências. Mitigado por evidência manual: `npm run build` compila a página e `curl localhost:3000` retorna HTTP 200 com o HTML correto (verificado por mim nesta revisão).'
+    suggested_action: 'Quando a primeira story de UI exigir testes de componente, adicionar o ambiente jsdom + Testing Library e incluir o smoke test de render do health-check.'
+
+  - id: 'REL-001'
+    severity: low
+    finding: 'O contrato `HealthContract.getHealth()` documenta explicitamente "Não lança: qualquer falha de dependência é traduzida em um HealthReport com status degraded". A implementação viola isso: `HealthService.getHealth()` chama `this.readEnv()` (que é `parseEnv`, e lança `ZodError` para NODE_ENV inválido) fora de qualquer try/catch. Na prática o risco é baixo — NODE_ENV é controlado pelo Next.js — mas é divergência entre contrato documentado e implementação, e a superfície cresce à medida que variáveis obrigatórias forem adicionadas ao schema nas Stories 1.2/1.4.'
+    suggested_action: 'Envolver a leitura de ambiente em try/catch e traduzir a falha de validação em um HealthReport degradado, ou ajustar o contrato para declarar que erros de configuração propagam.'
+
+  - id: 'SEC-001'
+    severity: low
+    finding: 'Decisão deliberada e documentada: o erro bruto do Prisma é logado via `console.error` no servidor porque pode conter a connection string com senha. Verifiquei o log real do `next dev` nesta revisão e a credencial NÃO apareceu (Prisma 6.19 já redige a URL) — a postura é melhor do que o @dev supôs. Ainda assim, a premissa "log do servidor é seguro" só vale enquanto os logs forem locais; em produção com agregador de logs, qualquer erro do Prisma que venha a conter credencial vira exposição persistida.'
+    suggested_action: 'Quando a story de observabilidade/produção for criada, sanitizar o erro antes de logar (remover `postgresql://.*@`) em vez de confiar na redação do driver.'
+
+  - id: 'MNT-001'
+    severity: low
+    finding: '`npm audit` reporta vulnerabilidade HIGH (GHSA-ggr8-5vv4-36mx, stack exhaustion em `deepmerge-ts`) via `prisma` → `@prisma/config`. É dependência de desenvolvimento, fora do bundle de runtime, e a correção exige downgrade breaking do Prisma para 6.12.0. As Completion Notes registram "1 vulnerabilidade"; o `npm audit` reporta 3 (mesmo advisory, 3 caminhos na árvore).'
+    suggested_action: 'Aceitar como dívida técnica e reavaliar no próximo bump do Prisma. Corrigir a contagem nas notas se a story for revisitada.'
+
+  - id: 'DOC-001'
+    severity: low
+    finding: 'CodeRabbit não foi executado em nenhuma fase — o CLI só roda via WSL e o WSL não está instalado nesta máquina (confirmado: `wsl.exe -l -v` retorna "O Subsistema do Windows para Linux não está instalado"). Graceful degradation aplicada corretamente, mas a story fecha sem nenhuma revisão automatizada, no gate do @dev e no meu.'
+    suggested_action: '@devops roda `coderabbit --prompt-only --base main` em ambiente com WSL antes de abrir o PR (já registrado como Pre-PR na story).'
+
+waiver: { active: false }
+
+evidence:
+  validations_reexecuted_by_qa:
+    - command: 'npm run lint'
+      result: 'PASS — sem erros'
+    - command: 'npm run typecheck'
+      result: 'PASS — sem erros'
+    - command: 'npm test'
+      result: 'PASS — 8 testes / 2 arquivos'
+    - command: 'npm run build'
+      result: 'PASS — `/` compilada como ƒ (Dynamic), conforme projetado'
+    - command: 'npm run dev + curl localhost:3000'
+      result: 'PASS — HTTP 200, HTML 15.019 bytes, estado "Degradado"/"Sem resposta" (correto sem banco)'
+    - command: 'npx prisma validate'
+      result: 'PASS — schema válido'
+  security_checks:
+    - check: '.env versionado?'
+      result: 'NÃO — ignorado por .gitignore:4, ausente de `git ls-files`'
+    - check: 'valores de POSTGRES_PASSWORD / MOVERE_API_PASSWORD / MOVERE_API_USER / DATABASE_URL em algum arquivo versionado?'
+      result: 'NÃO — 0 ocorrências varrendo todos os arquivos rastreados pelo git'
+    - check: 'segredos no HTML servido?'
+      result: 'NÃO — 0 ocorrências; `postgresql://` ausente do HTML'
+    - check: 'credencial no log do servidor?'
+      result: 'NÃO — connection string e senha ausentes do log do next dev'
+    - check: '.env.example com valores reais?'
+      result: 'NÃO — DATABASE_URL, POSTGRES_* e MOVERE_API_* todos vazios'
+    - check: 'senha default no docker-compose.yml?'
+      result: 'NÃO — usa `${POSTGRES_PASSWORD:?...}`, falha explícita em vez de default'
+  acceptance_criteria:
+    AC1: 'MET — Next.js 16.3.3 App Router + TS strict (4 flags extras do preset) + Tailwind 4; estrutura features/shared/config/lib presente; zod instalado'
+    AC2: 'PARTIALLY MET — Prisma + schema válido + migração baseline + docker-compose escritos e revisados, mas nunca executados contra um Postgres real (TEST-001)'
+    AC3: 'MET — HTTP 200 verificado, health-check renderiza e degrada corretamente sem banco'
+    AC4: 'NOT MET — delegada ao @devops por TD-05 (REQ-001)'
