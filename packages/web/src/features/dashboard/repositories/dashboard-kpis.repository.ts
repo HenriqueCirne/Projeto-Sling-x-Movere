@@ -1,8 +1,8 @@
 import type { PrismaClient } from '@prisma/client';
 
 import { getPrismaClient } from '@/lib/prisma';
-
-import type { PeriodFilter } from '../dashboard.contract';
+import type { ReportFilter } from '@/shared/report-filters/report-filter.contract';
+import { buildSalesEntryWhere } from '@/shared/report-filters/sales-entry-where';
 
 /**
  * Agregados brutos vindos do banco, antes do cálculo de Ticket Médio (que é
@@ -17,25 +17,15 @@ export type DashboardAggregates = {
 };
 
 export interface DashboardKpisRepository {
-  getAggregates(period: PeriodFilter): Promise<DashboardAggregates>;
+  getAggregates(period: ReportFilter): Promise<DashboardAggregates>;
 }
 
 export class PrismaDashboardKpisRepository implements DashboardKpisRepository {
   constructor(private readonly resolveClient: () => PrismaClient = getPrismaClient) {}
 
-  async getAggregates(period: PeriodFilter): Promise<DashboardAggregates> {
+  async getAggregates(period: ReportFilter): Promise<DashboardAggregates> {
     const prisma = this.resolveClient();
-
-    const where = {
-      ...(period.dataInicial || period.dataFinal
-        ? {
-            dataEmissao: {
-              ...(period.dataInicial ? { gte: period.dataInicial } : {}),
-              ...(period.dataFinal ? { lte: period.dataFinal } : {}),
-            },
-          }
-        : {}),
-    };
+    const where = buildSalesEntryWhere(period);
 
     // Duas idas ao banco, não uma: `aggregate` não faz COUNT(DISTINCT) sobre
     // uma coluna não-agrupada. `groupBy` (não `$queryRaw`) porque o GROUP BY

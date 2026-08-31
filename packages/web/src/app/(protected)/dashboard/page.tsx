@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 
-import { KpiCard } from '@/features/dashboard/components/KpiCard';
-import { formatCurrency, formatInteger, periodFilterInputSchema, toPeriodFilter } from '@/features/dashboard';
+import { KpiCard } from '@/shared/components/KpiCard';
+import { formatCurrency, formatInteger } from '@/features/dashboard';
 import { dashboardKpisService } from '@/features/dashboard/services/dashboard-kpis.service';
-import { PeriodFilterForm } from '@/shared/components/PeriodFilterForm';
+import { parseReportFilterSearchParams } from '@/shared/report-filters/parse-search-params';
+import { ReportFilterForm } from '@/shared/components/ReportFilterForm';
 
 export const metadata: Metadata = {
   title: 'Painel — Movimento Gerais',
@@ -31,18 +32,9 @@ export default async function DashboardPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
+  const { filter, valid } = parseReportFilterSearchParams(params);
 
-  const parsedFilter = periodFilterInputSchema.safeParse({
-    dataInicial: typeof params.dataInicial === 'string' ? params.dataInicial : undefined,
-    dataFinal: typeof params.dataFinal === 'string' ? params.dataFinal : undefined,
-  });
-
-  // Filtro inválido (ex: URL editada à mão com datas invertidas) degrada para
-  // "sem filtro" em vez de quebrar a página — a mesma filosofia do
-  // health-check da Story 1.1 (degradar, não derrubar).
-  const period = parsedFilter.success ? toPeriodFilter(parsedFilter.data) : {};
-
-  const kpis = await dashboardKpisService.getKpis(period);
+  const kpis = await dashboardKpisService.getKpis(filter);
 
   return (
     <main className="flex-1 space-y-6 bg-zinc-50 p-6 dark:bg-zinc-950">
@@ -55,9 +47,9 @@ export default async function DashboardPage({
         </p>
       </header>
 
-      <PeriodFilterForm />
+      <ReportFilterForm />
 
-      {!parsedFilter.success && (
+      {!valid && (
         <p role="alert" className="text-sm text-red-700 dark:text-red-300">
           Período inválido — exibindo todos os lançamentos.
         </p>

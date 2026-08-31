@@ -1,4 +1,6 @@
-import type { DashboardKpis, DashboardKpisContract, PeriodFilter } from '../dashboard.contract';
+import type { ReportFilter } from '@/shared/report-filters/report-filter.contract';
+
+import type { DashboardKpis, DashboardKpisContract } from '../dashboard.contract';
 import {
   dashboardKpisRepository,
   type DashboardKpisRepository,
@@ -14,7 +16,7 @@ import {
 export class DashboardKpisService implements DashboardKpisContract {
   constructor(private readonly repository: DashboardKpisRepository = dashboardKpisRepository) {}
 
-  async getKpis(period: PeriodFilter = {}): Promise<DashboardKpis> {
+  async getKpis(period: ReportFilter = {}): Promise<DashboardKpis> {
     const aggregates = await this.repository.getAggregates(period);
 
     return {
