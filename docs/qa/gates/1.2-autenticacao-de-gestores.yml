@@ -1,0 +1,70 @@
+schema: 1
+story: '1.2'
+story_title: 'Autenticação de gestores'
+gate: CONCERNS
+status_reason: 'AC1, AC3, AC4 e AC5 verificadas por código e teste; AC2 é coberta na lógica pura mas o fluxo de autenticação completo (Auth.js + Prisma adapter + Postgres real) nunca foi exercitado de ponta a ponta — mesma limitação de ambiente (Docker/WSL ausentes) já registrada na Story 1.1. Nenhum problema bloqueante de segurança ou de código.'
+reviewer: 'Quinn (Test Architect)'
+reviewed_revision: 'commit:cd8f02b'
+updated: '2026-08-31T16:05:00Z'
+
+top_issues:
+  - id: 'TEST-001'
+    severity: medium
+    finding: 'O fluxo de autenticação completo (Auth.js v5 + `@auth/prisma-adapter` + Credentials provider contra um PostgreSQL real, incluindo a troca de `jwt.encode` por um `sessionToken` persistido) nunca foi exercitado de ponta a ponta. Docker e WSL não estão instalados nesta máquina (reconfirmado nesta revisão: `docker --version` → command not found; `wsl.exe` → WSL não instalado) — mesma limitação L1 da Story 1.1. A cobertura de teste é real e boa (63 testes / 8 arquivos), mas cobre peças isoladas (validação de credenciais, hashing, sanitização de rota, config do cookie) e não a integração entre elas.'
+    suggested_action: 'Em qualquer máquina com Docker: `npm run db:up && npm run db:deploy && npm run db:seed`, depois validar manualmente o fluxo completo em `/login` (credenciais válidas, credenciais inválidas, acesso a `/dashboard` sem sessão, logout) e registrar a evidência.'
+
+  - id: 'TEST-002'
+    severity: low
+    finding: 'Não há teste de render para `LoginForm`/`/login` — mesma lacuna pré-existente já registrada como TEST-002 no gate da Story 1.1 (ambiente Vitest é `node`, sem React Testing Library/jsdom instalado). Não é regressão introduzida por esta story.'
+    suggested_action: 'Quando o ambiente de teste de componente for adicionado (jsdom + Testing Library), incluir o smoke test de render do formulário de login junto com o do health-check pendente da Story 1.1.'
+
+  - id: 'MNT-001'
+    severity: low
+    finding: 'As Completion Notes e o commit desta story relatam "22 testes novos" para o fechamento do gap de cobertura feito pelo @dev (route-guard, sign-in-result, seed-admin). A contagem real é 28 (suíte foi de 29 para 57 testes). Erro de aritmética no relato, não no código nem nos testes em si — todos os 57 (e agora 63, com o `auth.config.test.ts` adicionado nesta revisão) passam.'
+    suggested_action: '@dev corrige o número (22 → 28) nas Completion Notes da story na próxima edição.'
+
+  - id: 'MNT-002'
+    severity: low
+    finding: '`src/proxy.ts` declara `config.matcher: ["/dashboard", "/dashboard/:path*"]` como array fixo, em vez de derivar de `PROTECTED_PATH_PREFIXES` (a fonte única documentada em `route-guard.service.ts`). Adicionar um novo prefixo protegido (ex: na Story 1.5) sem lembrar de atualizar o matcher não é uma falha de segurança — o `auth()` no Server Component continua sendo a autorização autoritativa — mas perde o redirecionamento otimista/rápido do proxy para a rota nova, silenciosamente.'
+    suggested_action: 'Ao adicionar a próxima rota protegida, considerar derivar `config.matcher` de `PROTECTED_PATH_PREFIXES` (ou ao menos um comentário cruzado nos dois arquivos) para eliminar a duplicação manual.'
+
+  - id: 'SEC-001'
+    severity: low
+    finding: 'Não há rate limiting nem bloqueio por tentativas repetidas de login na rota de Credentials. Já identificado pelo @architect no TD-01 como recomendação — explicitamente não é uma AC desta story — então não é uma regressão, apenas um risco aceito e documentado.'
+    suggested_action: '@po decide se entra no backlog como story própria (rate limiting/lockout na rota de login) antes de produção.'
+
+waiver: { active: false }
+
+evidence:
+  validations_reexecutadas_pelo_qa:
+    - command: 'npm run lint'
+      result: 'PASS — sem erros'
+    - command: 'npm run typecheck'
+      result: 'PASS — sem erros (packages/web + tsconfig.seed.json)'
+    - command: 'npm test'
+      result: 'PASS — 63 testes / 8 arquivos (57 herdados do @dev + 6 adicionados nesta revisão em auth.config.test.ts)'
+    - command: 'npm run build'
+      result: 'PASS — build de produção OK, `/login` e `/dashboard` como rotas dinâmicas'
+    - command: 'npx prisma validate'
+      result: 'PASS — schema válido'
+    - command: 'npm audit --omit=dev'
+      result: 'PASS — única vulnerabilidade é a HIGH pré-existente em deepmerge-ts via prisma (dev-only, já documentada na Story 1.1/MNT-001); nenhuma introduzida pelas dependências novas (next-auth, @auth/prisma-adapter, @node-rs/argon2, react-hook-form, @hookform/resolvers)'
+  security_checks:
+    - check: '.env versionado?'
+      result: 'NÃO — ignorado por .gitignore, ausente de `git ls-files`'
+    - check: 'AUTH_SECRET / SEED_ADMIN_PASSWORD / SEED_ADMIN_EMAIL com valor em arquivo versionado?'
+      result: 'NÃO — 0 ocorrências; .env.example só declara as chaves vazias'
+    - check: 'senha em texto claro em código não-teste?'
+      result: 'NÃO — únicas ocorrências de string tipo senha são fixtures em arquivos *.test.ts'
+    - check: 'atributos do cookie de sessão (HttpOnly/SameSite/Secure)'
+      result: 'PASS — verificado por teste (auth.config.test.ts), não só por leitura de código'
+    - check: 'callback session vaza passwordHash ou sessionToken?'
+      result: 'NÃO — allowlist explícita, verificado por teste'
+    - check: 'proteção contra open redirect em callbackUrl?'
+      result: 'PASS — verificado por teste (route-guard.service.test.ts): URL absoluta, //host, /\\host, caracteres de controle'
+  acceptance_criteria:
+    AC1: 'MET — /login com LoginForm (React Hook Form + Zod), redireciona quem já tem sessão'
+    AC2: 'MET (lógica) / TEST-001 (integração) — proxy.ts (checagem otimista) + auth() no Server Component (autoritativo); nunca exercitado contra sessão real em Postgres'
+    AC3: 'MET — mensagem genérica idêntica para e-mail inexistente e senha errada, com equalização de tempo de resposta testada'
+    AC4: 'MET — sessão em banco (revogação imediata), cookie HttpOnly/SameSite=Lax/Secure(prod) verificado por teste, logout apaga a sessão'
+    AC5: 'MET — prisma/seed.ts idempotente; README atualizado nesta revisão para documentar `npm run db:seed` e a rota /login (DOC-001 do rascunho desta revisão, fechado diretamente)'
