@@ -166,6 +166,34 @@ job de sincronização da 1.4 precisa resolver esses códigos:
 - `Condição de Pagamento` → `GET /api/CondicoesDePagamento` (testado, funciona: `{codigoCondicao, nome}`, ex: 1 → "DINHEIRO", 2 → "CHEQUE"), mas **não encontrei o campo que liga a nota a um `codigoCondicao`** na resposta de `/api/NotasFiscaisEmitidas` testada — pode estar em `parcelas` (que veio sempre vazio, Achado 4) ou em outro campo não capturado nesta amostra. Fica como pendência do Achado 4.
 - `Prazo Médio` → provavelmente derivado de `parcelas[].dtavencto` vs. `dtaemissao` (média ponderada dos vencimentos) — também bloqueado pelo Achado 4, já que `parcelas` veio sempre vazio.
 
+## Achado 7 (2026-09-01) — Não existe caminho alternativo para item-de-venda; o bloqueio é específico, não geral
+
+Em resposta à pergunta "não existe outro caminho na API para os itens da venda?", testei
+mais 7 endpoints além dos do Achado 4/6 (todos GET, somente leitura, mesma conta):
+
+| Endpoint | Grupo | Resultado |
+|---|---|---|
+| `EstruturasDeItens` | movere-inteligente | ✅ Funciona — mas só devolve a hierarquia Linha→Família→Grupo (nomes e códigos de **categoria**), sem nenhum código de item individual dentro dela. Não serve para ligar um item vendido à sua classificação. |
+| `ProdutosConsultaAvancada` | movere-inteligente | Array vazio (`[]`) — mesmo padrão de bloqueio silencioso do Achado 4, ou exige parâmetro de busca não descoberto |
+| `PrecosDeItensPorEstabelecimentos` | movere-inteligente | ✅ Funciona — `codigoItem`, `precoVenda`, `precoCusto` por loja. É **catálogo de preço atual**, não o preço praticado em cada venda histórica |
+| `EstoquesDeItens` | movere-inteligente | ✅ Funciona — `codigoItem` + estoque disponível por loja |
+| `Vendedores` | movere-api | Array vazio (`[]`) — sem efeito prático: o nome do vendedor já vem embutido na própria nota (`Comercial.nomevendedor`, Achado 4) |
+| `Clientes` | movere-api | ✅ Funciona — cadastro completo de clientes |
+| `MarcasDeCaptacoes` | movere-api | ✅ Funciona — marcas/modelos de veículo (não é catálogo de produto/pneu; irrelevante para os relatórios) |
+
+**Conclusão: não há atalho.** Nenhum dos 11 endpoints testados nas duas sessões deste
+spike liga um item vendido à sua venda além dos dois já identificados no Achado 4
+(`NotasFiscaisEmitidas.produtos` e `NotasFiscaisEmitidasPorEstruturaDeItens`), e ambos
+continuam bloqueados/vazios para esta conta.
+
+**Achado com valor real, mesmo sem resolver o bloqueio:** o bloqueio é **específico do
+vínculo venda↔item**, não uma restrição geral a "dados de item" — a mesma conta acessa
+sem problema o catálogo de itens por loja (preço, estoque) e a árvore de classificação
+(Linha/Família/Grupo). Isso é evidência a favor de que o ajuste necessário no Moveres é
+uma permissão pontual (algo como "ver produtos em documentos fiscais"), não uma
+reconfiguração ampla da conta — vale citar isso ao suporte Moveres para agilizar o
+diagnóstico deles.
+
 ## Recomendação
 
 1. **Não iniciar a implementação da Story 1.4 agora.** O Achado 4 é um bloqueio real,
@@ -190,3 +218,4 @@ job de sincronização da 1.4 precisa resolver esses códigos:
 | Data | Versão | Descrição | Autor |
 |---|---|---|---|
 | 2026-08-31 | 1.0 | Spike técnico executado com credenciais reais (`.env`). Endpoints reais descobertos via `discoveryPaths` do Swagger UI. Autenticação, paginação e filtro incremental confirmados. Bloqueio encontrado: itens de linha e parcelas retornam vazios para a conta configurada (grupo "SEM ACESSO") | Dex (@dev) |
+| 2026-09-01 | 1.1 | Achado 7: testados mais 7 endpoints em busca de um caminho alternativo para item-de-venda (pergunta do usuário). Nenhum resolve o bloqueio — confirmado que os únicos dois endpoints com esse dado (Achado 4) continuam vazios/bloqueados. Achado com valor: o bloqueio é específico do vínculo venda↔item, não geral — catálogo de preço/estoque/classificação de item funciona normalmente com a mesma conta, o que sugere uma permissão pontual no Moveres, não uma reconfiguração ampla | Dex (@dev) |
