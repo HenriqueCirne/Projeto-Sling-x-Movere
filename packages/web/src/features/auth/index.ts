@@ -18,4 +18,4 @@ export {
 } from './auth.contract';
 
 export { auth, handlers, signIn, signOut } from './auth';
-export { isProtectedPath, sanitizeCallbackUrl } from './services/route-guard.service';
+export { sanitizeCallbackUrl } from './services/route-guard.service';

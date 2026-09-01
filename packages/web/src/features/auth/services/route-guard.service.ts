@@ -1,33 +1,14 @@
-import { DEFAULT_AUTHENTICATED_PATH, LOGIN_PATH, REPORTS_PATH_PREFIX } from '../auth.contract';
+import { DEFAULT_AUTHENTICATED_PATH } from '../auth.contract';
 
 /**
- * Regras puras de proteção de rota (AC2).
+ * Sanitização de destino pós-login.
  *
- * Separadas do `src/proxy.ts` porque proxy é um ponto de integração do
- * framework — difícil de exercitar em teste. As decisões ficam aqui, testáveis
- * como funções; o proxy só liga os fios.
+ * A checagem de rota protegida (`isProtectedPath`/`PROTECTED_PATH_PREFIXES`)
+ * que vivia aqui foi removida em 2026-09-01 — decisão do stakeholder de
+ * remover a exigência de sessão (ver `docs/architecture/tech-decisions.md#TD-06`).
+ * `sanitizeCallbackUrl` continua em uso: a tela de login em si não foi
+ * removida, só deixou de ser obrigatória.
  */
-
-/**
- * Prefixos que exigem sessão. Ao criar uma nova área autenticada, acrescente
- * o prefixo aqui **e** em `src/proxy.ts#config.matcher` (o Next.js exige que
- * o matcher do proxy seja um array estático — não dá para derivá-lo deste
- * array em tempo de execução) **e** coloque a rota sob `src/app/(protected)/`.
- * As três coisas: o proxy é a rede de segurança rápida (cookie), o layout é
- * a autorização de verdade (sessão no banco).
- *
- * Story 2.1 esqueceu o passo do proxy ao adicionar `/relatorios` — descoberto
- * só em teste manual (as rotas continuaram protegidas pelo layout, mas sem o
- * atalho otimista). Ver MNT-002 no gate da Story 1.5, que já previu este
- * exato risco.
- */
-export const PROTECTED_PATH_PREFIXES = [DEFAULT_AUTHENTICATED_PATH, REPORTS_PATH_PREFIX] as const;
-
-export function isProtectedPath(pathname: string): boolean {
-  return PROTECTED_PATH_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
-}
 
 /** Detecta caracteres de controle, que permitem contrabandear cabeçalhos. */
 const CONTROL_CHARACTERS = /[\u0000-\u001F\u007F]/;
@@ -62,13 +43,4 @@ export function sanitizeCallbackUrl(
   }
 
   return rawCallbackUrl;
-}
-
-/**
- * Monta o destino de redirecionamento para quem tentou acessar rota protegida
- * sem sessão, preservando a intenção original em `callbackUrl`.
- */
-export function buildLoginRedirectPath(pathname: string, search = ''): string {
-  const attempted = sanitizeCallbackUrl(`${pathname}${search}`, DEFAULT_AUTHENTICATED_PATH);
-  return `${LOGIN_PATH}?callbackUrl=${encodeURIComponent(attempted)}`;
 }

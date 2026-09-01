@@ -19,7 +19,7 @@
 
 1. NFR1: Os dados exibidos não devem ter mais de 24 horas de defasagem em relação ao ERP.
 2. NFR2: O sistema deve suportar o volume atual de dados (23.724+ lançamentos por bimestre, com tendência de crescimento) com tempos de resposta na casa de poucos segundos por relatório.
-3. NFR3: O acesso à aplicação deve ser restrito a usuários autenticados (gestores); não deve haver acesso público ou anônimo.
+3. NFR3: O acesso à aplicação deve ser restrito a usuários autenticados (gestores); não deve haver acesso público ou anônimo. **⚠️ Amendment 2026-09-01:** a exigência de login foi removida por decisão explícita do stakeholder, sobrepondo esta NFR — ver `docs/architecture/tech-decisions.md#td-06--remoção-da-exigência-de-login-stories-12-15` para o racional completo e como reverter. A implementação de autenticação (Story 1.2) permanece no ar e funcional; apenas deixou de ser obrigatória.
 4. NFR4: As credenciais de integração com o ERP não devem ser armazenadas em código-fonte versionado.
 5. NFR5: O sistema deve ser responsivo, funcionando corretamente em navegadores desktop modernos (Chrome, Edge).
 6. NFR6: Falhas na sincronização diária com o ERP devem ser registradas (log) para permitir diagnóstico técnico.

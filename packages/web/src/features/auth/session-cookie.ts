@@ -24,16 +24,3 @@ export function usesSecureCookies(nodeEnv: string | undefined = process.env.NODE
 export function getSessionCookieName(secure: boolean = usesSecureCookies()): string {
   return secure ? `__Secure-${SESSION_COOKIE_BASE_NAME}` : SESSION_COOKIE_BASE_NAME;
 }
-
-/**
- * Ambos os nomes possíveis.
- *
- * O `proxy.ts` verifica os dois em vez de deduzir o ambiente: um proxy que
- * procura o nome errado deixa de redirecionar (falso "autenticado") ou
- * redireciona sempre (login em laço). Verificar os dois é uma checagem
- * otimista — a autorização real acontece no Server Component.
- */
-export const SESSION_COOKIE_NAMES = [
-  getSessionCookieName(false),
-  getSessionCookieName(true),
-] as const;

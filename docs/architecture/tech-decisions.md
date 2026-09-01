@@ -20,6 +20,8 @@
 | TD-03 | API Moveres Software | **Não validável sem credenciais — risco em aberto, exige spike antes da 1.4** | ⚠️ Risco aberto |
 | TD-04 | Ticket Médio (1.3 × 1.5) | **Paridade confirmada por dado real: é por LINHA. Schema deve carregar `Nº documento` mesmo assim** | ✅ Decidido (com pergunta de negócio aberta) |
 | TD-05 | Pipeline de CI (1.1 AC4) | **Delegação exclusiva ao @devops — não é tarefa do @dev** | ✅ Esclarecido |
+| TD-06 | Autenticação (Stories 1.2/1.5) | **Tela de login removida da rota obrigatória — decisão explícita do stakeholder, sobrepõe a NFR3** | ⚠️ Decisão de negócio registrada |
+| TD-07 | Fonte de dados (Story 1.4) | **Sincronização automática com a API Moveres substituída por importação manual de planilha, enquanto o acesso a itens de linha permanecer bloqueado (R2)** | ✅ Decidido |
 
 ---
 
@@ -234,13 +236,58 @@ A aba `Dados` traz 99 colunas, muito além dos ~15 que os 8 relatórios exigem (
 
 ---
 
+## TD-06 — Remoção da exigência de login (Stories 1.2, 1.5)
+
+### Decisão
+
+A partir de **2026-09-01**, `/dashboard` e `/relatorios/*` deixam de exigir sessão autenticada. Mudanças aplicadas:
+
+- `src/proxy.ts` (a rede de segurança rápida via cookie) foi **removido**.
+- O grupo de rotas `src/app/(protected)/` foi **renomeado para `src/app/(app)/`** — mantinha o nome antigo seria enganoso, já que ele não protege mais nada.
+- `AppLayout` (antes com checagem `auth()` + redirect para `/login`) não faz mais checagem de sessão nenhuma.
+- `isProtectedPath`, `PROTECTED_PATH_PREFIXES` e `buildLoginRedirectPath` (em `route-guard.service.ts`) foram removidos por serem código morto após a remoção do proxy; `sanitizeCallbackUrl` foi mantida.
+- A **tela de login em si não foi removida** (`/login` continua no ar, `Auth.js`/Credentials/argon2id continuam funcionais) — ela só deixou de ser **obrigatória**. Um gestor pode logar se quiser, mas nada exige isso para ver os relatórios.
+
+### Racional
+
+Isto é uma **decisão de stakeholder, não uma recomendação de arquitetura.** O login (TD-01) já estava implementado e verificado ponta-a-ponta contra um Postgres real (Supabase) quando a remoção foi pedida — não é um caso de "login não funcionava, então tiramos". A decisão foi tomada e confirmada explicitamente duas vezes pelo stakeholder, a segunda já ciente do trade-off (pergunta feita via `AskUserQuestion`, resposta: *"Remover mesmo assim"*).
+
+### Conflito com requisito documentado
+
+Isto **contradiz diretamente a NFR3** do PRD (`docs/prd/requirements.md`): *"não deve haver acesso público ou anônimo"*. O documento de requisitos foi atualizado com uma nota apontando para esta seção — não foi silenciosamente apagado (ver Change Log da NFR3).
+
+### Consequência
+
+- Dados comerciais reais (faturamento, clientes, itens vendidos) ficam acessíveis a qualquer pessoa com a URL, sem autenticação. Aceito conscientemente pelo stakeholder.
+- Se a decisão for revertida no futuro: restaurar `src/proxy.ts` (histórico no git antes deste commit), devolver a checagem `auth()`/redirect ao `AppLayout`, e restaurar `isProtectedPath`/`PROTECTED_PATH_PREFIXES`/`buildLoginRedirectPath` em `route-guard.service.ts` (também disponíveis no histórico do git). A tela de login e a tabela de usuários não precisam de nenhuma mudança — nunca saíram do ar.
+
+---
+
+## TD-07 — Fonte de dados: importação de planilha substitui sync automático (Story 1.4)
+
+### Decisão
+
+Enquanto o **R2** (permissão da conta Moveres bloqueando itens de linha) não for resolvido pelo stakeholder junto ao fornecedor, a fonte de dados do MVP passa a ser **importação manual de planilha** (o mesmo arquivo que já alimenta o Excel hoje), carregada diretamente no schema `sales_entries` já validado pela Story 1.3 — nenhum modelo de dado novo, nenhum trabalho da Epic 1/2/3 é descartado.
+
+### Racional
+
+O stakeholder decidiu não esperar a resolução do bloqueio de permissão da API (TD-03/R2) para colocar o sistema em uso. Como o schema `sales_entries` já foi desenhado a partir da mesma planilha de referência (`DOC/Dashboard_Vendas_Jul_Ago_2026.xlsx`, ver TD-04), importar a planilha diretamente é reaproveitamento total do trabalho já feito — não é um novo caminho de dados, é o caminho de dados original (Excel) apontado para o Postgres em vez de para o próprio Excel.
+
+### Consequência
+
+- A Story 1.4 ("sincronização automática com o ERP") fica **pausada, não cancelada** — permanece bloqueada por R2 e pode ser retomada quando a permissão for corrigida.
+- Uma nova capacidade de **importação de planilha → `sales_entries`** precisa ser especificada e implementada (story ainda não criada nesta sessão).
+- Como consequência de TD-02, o banco de desenvolvimento passou de "Docker local, decisão de produção em aberto (R3)" para **Supabase Postgres (Session Pooler)** já em uso — resolve R3 na prática, ainda que não formalmente ratificado como decisão de produção definitiva. Detalhe de conexão: a porta 5432 (Session Pooler) é obrigatória com Prisma — a porta 6543 (Transaction Pooler) quebra com `"prepared statement already exists"` por incompatibilidade entre PgBouncer/Supavisor em modo transação e prepared statements do Prisma.
+
+---
+
 ## Riscos abertos que exigem decisão humana (não técnica)
 
 | # | Questão | Bloqueia | Quem decide |
 |---|---|---|---|
 | R1 | **Ticket Médio é por linha (R$ 438,15) ou por venda (R$ 978,87)?** Hoje a planilha usa por linha; o schema vai suportar ambos | Não bloqueia a 1.5 (paridade prevalece) | Gestor / @po |
 | R2 | **Permissão da conta Moveres bloqueia itens de linha/parcelas** (grupo "SEM ACESSO" — spike de 2026-08-31 confirmou paginação/incremento, mas não itens de linha) | **BLOQUEIA a Story 1.4** | Stakeholder (ajustar permissão junto ao Moveres/administrador da conta) |
-| R3 | **Hospedagem** (cloud, Postgres gerenciado ou servidor local da loja) | Não bloqueia a Epic 1 (dev roda em Docker local) | Stakeholder |
+| R3 | **Hospedagem** (cloud, Postgres gerenciado ou servidor local da loja) | Resolvido na prática para o banco — **Supabase Postgres** em uso (ver TD-07). Hospedagem da aplicação em si (Vercel/Railway/outro) continua em aberto | Stakeholder |
 | R4 | **Backfill histórico** — dashboard começa no go-live ou importa histórico anterior a Jul/2026? Muda o volume e o custo do primeiro sync | Afeta escopo da 1.4 | Stakeholder |
 | R5 | **Limites das faixas de Prazo Médio** (FR5) — não documentados em lugar nenhum | Bloqueia Epic 2/3, não a Epic 1 | Gestor / @po |
 
@@ -252,3 +299,4 @@ A aba `Dados` traz 99 colunas, muito além dos ~15 que os 8 relatórios exigem (
 |------|--------|-----------|-------|
 | 2026-08-27 | 1.0 | Documento criado: TD-01 a TD-05, desbloqueio técnico da Epic 1. Achados TD-04 baseados em análise dos dados reais de `DOC/Dashboard_Vendas_Jul_Ago_2026.xlsx` | Aria (@architect) |
 | 2026-08-31 | 1.1 | Spike técnico da API Moveres executado (TD-03) — ver `docs/architecture/api-moveres-contract-spike.md`. Autenticação/paginação/incremento confirmados; bloqueio encontrado no acesso a itens de linha e parcelas (grupo de permissão "SEM ACESSO"). R2 atualizado: de "contrato não validado" para "permissão da conta bloqueia itens de linha" — Story 1.4 continua bloqueada até ação do stakeholder junto ao Moveres | Dex (@dev) |
+| 2026-09-01 | 1.2 | TD-06 (remoção da exigência de login, decisão de stakeholder, sobrepõe NFR3) e TD-07 (importação de planilha substitui sync automático enquanto R2 não é resolvido; Supabase Postgres em uso, resolvendo R3 na prática) registrados | Dex (@dev) |
