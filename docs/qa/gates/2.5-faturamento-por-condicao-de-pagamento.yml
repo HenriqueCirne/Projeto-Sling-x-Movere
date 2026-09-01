@@ -1,0 +1,28 @@
+schema: 1
+story: '2.5'
+story_title: 'Faturamento por Condição de Pagamento'
+gate: CONCERNS
+status_reason: 'AC1/AC2 implementadas e testadas. Único achado é a limitação recorrente de ambiente (sem Docker).'
+reviewer: 'Quinn (Test Architect)'
+reviewed_revision: 'commit:5b2630a'
+updated: '2026-09-01T09:00:00Z'
+
+top_issues:
+  - id: 'TEST-001'
+    severity: medium
+    finding: 'Mesma limitação recorrente: sem Docker/WSL, a query nunca rodou contra Postgres real.'
+    suggested_action: 'Smoke test manual com Docker quando disponível.'
+  - id: 'UX-001'
+    severity: low
+    finding: 'O filtro de loja (`showLoja`, compartilhado entre 2.1/2.5/3.2/3.3) é um campo de texto livre com correspondência exata (`where: { loja: valor }`) — não há catálogo de lojas sincronizado na aplicação ainda (Estabelecimentos não é sincronizado por nenhuma story atual). Um typo no nome da loja resulta silenciosamente em "nenhum resultado", sem indicar que a loja pode não existir.'
+    suggested_action: 'Quando a Story 1.4 (ou uma story de catálogo) sincronizar Estabelecimentos, trocar o campo de texto por um select com as lojas reais.'
+
+waiver: { active: false }
+
+evidence:
+  validacoes_reexecutadas_pelo_qa:
+    - command: 'npm run lint / typecheck / test / build'
+      result: 'PASS — 133 testes / 23 arquivos, build OK'
+  acceptance_criteria:
+    AC1: 'MET — faturamento agrupado por Condição de Pagamento, ordenado no banco'
+    AC2: 'MET — filtro de período e loja'

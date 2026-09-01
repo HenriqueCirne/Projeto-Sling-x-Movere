@@ -1,0 +1,36 @@
+schema: 1
+story: '2.1'
+story_title: 'Faturamento por Data'
+gate: CONCERNS
+status_reason: 'AC1–AC3 implementadas e testadas (agregação diária/mensal em memória, sem SQL cru; filtro de período+loja). AC4 (paridade com a planilha) bloqueada pela Story 1.4. Achado real corrigido durante a implementação: proxy não cobria /relatorios (MNT-002 do gate 1.5, agora materializado). Nenhum bloqueio de segurança.'
+reviewer: 'Quinn (Test Architect)'
+reviewed_revision: 'commit:5b2630a'
+updated: '2026-09-01T09:00:00Z'
+
+top_issues:
+  - id: 'REQ-001'
+    severity: medium
+    finding: 'AC4 (paridade com a planilha Excel) não está atendida — `sales_entries` está vazia até a Story 1.4 desbloquear. A query está correta e testada com dado fake; não é falha de implementação.'
+    suggested_action: 'Validar a paridade assim que a Story 1.4 gravar dados reais para o mesmo período analisado no TD-04.'
+  - id: 'TEST-001'
+    severity: medium
+    finding: 'Mesma limitação recorrente (1.1–1.5): sem Docker/WSL, a agregação nunca rodou contra um Postgres real com volume de verdade (NFR2). Cobertura forte em lógica pura (repositório fake); integração real ausente.'
+    suggested_action: 'Smoke test manual com Docker: seed de alguns milhares de linhas, medir o tempo de resposta da página.'
+  - id: 'ARCH-001'
+    severity: low
+    finding: 'Nenhuma lib de gráficos foi adicionada — a story implementou um gráfico de barras dependência-livre (CSS puro) em vez de uma lib real. Decisão de escopo razoável (evita inventar uma escolha de arquitetura fora do pedido), mas o resultado visual é rudimentar.'
+    suggested_action: '@architect/@ux-design-expert avaliar se vale adicionar uma lib de charting quando houver dado real para desenhar contra.'
+
+waiver: { active: false }
+
+evidence:
+  validacoes_reexecutadas_pelo_qa:
+    - command: 'npm run lint / typecheck / test / build'
+      result: 'PASS — 133 testes / 23 arquivos, build OK'
+    - command: 'validação manual (dev server): /relatorios/faturamento-por-data sem sessão'
+      result: 'PASS — 307 para /login com callbackUrl preservado (proxy intercepta antes do layout, sem tocar o banco)'
+  acceptance_criteria:
+    AC1: 'MET — série diária correta e testada'
+    AC2: 'MET — agregação mensal (groupByMonth, pura, testada) sobre os mesmos dados'
+    AC3: 'MET — filtro de período+loja reutilizado'
+    AC4: 'NOT MET (REQ-001) — bloqueada pela Story 1.4'

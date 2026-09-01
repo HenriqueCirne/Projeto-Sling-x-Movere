@@ -1,0 +1,34 @@
+schema: 1
+story: '3.2'
+story_title: 'Tipo de Preço × Loja × Item'
+gate: CONCERNS
+status_reason: 'AC1 implementada e testada. AC2 (seletor de dimensão de foco) implementado com uma interpretação razoável e explicitamente registrada (reordenação, não re-agregação) — a story reconhece que nenhum documento especifica o pivot exato da planilha. Único achado técnico é a limitação recorrente de ambiente.'
+reviewer: 'Quinn (Test Architect)'
+reviewed_revision: 'commit:5b2630a'
+updated: '2026-09-01T09:00:00Z'
+
+top_issues:
+  - id: 'TEST-001'
+    severity: medium
+    finding: 'Mesma limitação recorrente: sem Docker/WSL, a query nunca rodou contra Postgres real.'
+    suggested_action: 'Smoke test manual com Docker quando disponível.'
+  - id: 'REQ-002'
+    severity: low
+    finding: 'A AC2 ("seletor permite escolher a dimensão de foco, replicando o comportamento da planilha atual") foi implementada como reordenação client-side dos mesmos dados, não como re-agregação por dimensão. É uma interpretação razoável e honesta (registrada nos Dev Notes como não-invenção), mas ainda é uma interpretação — vale confirmar com o gestor se bate com a expectativa real da planilha antes de considerar esta AC definitivamente fechada.'
+    suggested_action: '@po confirmar com o gestor o comportamento esperado do seletor de foco na próxima revisão de produto.'
+  - id: 'MNT-001'
+    severity: low
+    finding: '`TipoPrecoLojaItemTable` usa o índice do array como `key` de linha em vez de uma chave composta (tipoPreco+loja+item) — funciona corretamente (groupBy garante linhas únicas, sort não duplica), mas é menos robusto a mudanças futuras no componente.'
+    suggested_action: 'Trocar para `key={`${row.tipoPreco}-${row.loja}-${row.item}`}` na próxima revisão do componente.'
+
+waiver: { active: false }
+
+evidence:
+  validacoes_reexecutadas_pelo_qa:
+    - command: 'npm run lint / typecheck / test / build'
+      result: 'PASS — 133 testes / 23 arquivos, build OK'
+    - check: 'Client Component não importa do barrel server-only'
+      result: 'CONFIRMADO — TipoPrecoLojaItemTable importa formatCurrency de @/features/dashboard/format (módulo concreto), não do barrel que arrasta Prisma'
+  acceptance_criteria:
+    AC1: 'MET — cruzamento das 3 dimensões numa única query'
+    AC2: 'MET com ressalva (REQ-002) — interpretação registrada, não confirmada com o negócio'

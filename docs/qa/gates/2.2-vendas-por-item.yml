@@ -1,0 +1,25 @@
+schema: 1
+story: '2.2'
+story_title: 'Vendas por Item (Família/Grupo/Marca/Linha)'
+gate: CONCERNS
+status_reason: 'AC1–AC3 implementadas e testadas (groupBy type-safe, ordenação no banco, campos nulos tratados como "Não informado"). Único achado é a limitação recorrente de ambiente (sem Docker).'
+reviewer: 'Quinn (Test Architect)'
+reviewed_revision: 'commit:5b2630a'
+updated: '2026-09-01T09:00:00Z'
+
+top_issues:
+  - id: 'TEST-001'
+    severity: medium
+    finding: 'Mesma limitação recorrente: sem Docker/WSL, a query nunca rodou contra Postgres real. Cobertura forte em lógica pura (4 testes, incluindo o tratamento de nulos).'
+    suggested_action: 'Smoke test manual com Docker quando disponível.'
+
+waiver: { active: false }
+
+evidence:
+  validacoes_reexecutadas_pelo_qa:
+    - command: 'npm run lint / typecheck / test / build'
+      result: 'PASS — 133 testes / 23 arquivos, build OK'
+  acceptance_criteria:
+    AC1: 'MET — agrupamento correto por Família/Grupo/Item'
+    AC2: 'MET — filtro de período'
+    AC3: 'MET — ordenação por quantidade decrescente, feita no banco (orderBy do groupBy), não em memória'

@@ -1,0 +1,26 @@
+schema: 1
+story: '2.3'
+story_title: 'Vendas por Item aberto por Loja'
+gate: CONCERNS
+status_reason: 'AC1/AC2 implementadas reaproveitando integralmente a feature da Story 2.2 (sem duplicação de repositório/serviço/tabela). Único achado é a limitação recorrente de ambiente.'
+reviewer: 'Quinn (Test Architect)'
+reviewed_revision: 'commit:5b2630a'
+updated: '2026-09-01T09:00:00Z'
+
+top_issues:
+  - id: 'TEST-001'
+    severity: medium
+    finding: 'Mesma limitação recorrente: sem Docker/WSL. Cobertura de teste está no `vendas-por-item.service.test.ts` da 2.2 (o caso "com loja" já estava incluído lá).'
+    suggested_action: 'Smoke test manual com Docker quando disponível.'
+
+waiver: { active: false }
+
+evidence:
+  validacoes_reexecutadas_pelo_qa:
+    - command: 'npm run lint / typecheck / test / build'
+      result: 'PASS — 133 testes / 23 arquivos, build OK'
+    - check: 'reuso genuíno, não duplicação disfarçada'
+      result: 'CONFIRMADO — nenhum arquivo novo em features/reports/vendas-por-item/ nesta story; só a rota (page.tsx) é nova, consumindo o método getPorItemPorLoja já existente'
+  acceptance_criteria:
+    AC1: 'MET — mesma visão da 2.2 com a dimensão Loja'
+    AC2: 'MET — compara quantidade do mesmo item entre lojas (mesma tabela, coluna Loja)'

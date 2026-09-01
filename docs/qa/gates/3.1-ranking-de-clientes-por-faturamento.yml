@@ -1,0 +1,27 @@
+schema: 1
+story: '3.1'
+story_title: 'Ranking de Clientes por Faturamento'
+gate: CONCERNS
+status_reason: 'AC1–AC3 implementadas e testadas. Decisão correta de excluir cliente nulo do ranking (em vez de agrupar sob "Não informado"), bem documentada. Único achado é a limitação recorrente de ambiente.'
+reviewer: 'Quinn (Test Architect)'
+reviewed_revision: 'commit:5b2630a'
+updated: '2026-09-01T09:00:00Z'
+
+top_issues:
+  - id: 'TEST-001'
+    severity: medium
+    finding: 'Mesma limitação recorrente: sem Docker/WSL, a query nunca rodou contra Postgres real.'
+    suggested_action: 'Smoke test manual com Docker quando disponível.'
+
+waiver: { active: false }
+
+evidence:
+  validacoes_reexecutadas_pelo_qa:
+    - command: 'npm run lint / typecheck / test / build'
+      result: 'PASS — 133 testes / 23 arquivos, build OK'
+    - check: 'cliente: { not: null } aplicado no where, não filtrado depois'
+      result: 'CONFIRMADO por leitura do repositório — evita trazer e descartar linhas desnecessariamente'
+  acceptance_criteria:
+    AC1: 'MET — ordenação decrescente por faturamento, no banco'
+    AC2: 'MET — filtro de período'
+    AC3: 'MET — posição 1-based calculada no serviço, nunca reordenada'
