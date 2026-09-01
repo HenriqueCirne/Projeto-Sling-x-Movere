@@ -56,6 +56,9 @@ export const LOGIN_PATH = '/login';
 /** Rota inicial da área autenticada. */
 export const DEFAULT_AUTHENTICATED_PATH = '/dashboard';
 
+/** Raiz das rotas de relatório (Epic 2/3) — também exige sessão. */
+export const REPORTS_PATH_PREFIX = '/relatorios';
+
 /**
  * Tempo de vida da sessão, em segundos.
  *

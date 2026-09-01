@@ -35,7 +35,10 @@ export function proxy(request: NextRequest): NextResponse {
 }
 
 export const config = {
+  // O Next.js exige que `matcher` seja um array ESTÁTICO — não dá para gerar
+  // isto a partir de `PROTECTED_PATH_PREFIXES` (route-guard.service.ts) em
+  // tempo de execução. Ao adicionar um prefixo lá, adicione aqui também.
   // Precisa listar a rota exata e as filhas: `:path*` casa zero segmentos, mas
   // manter as duas entradas deixa a intenção explícita para quem for estender.
-  matcher: ['/dashboard', '/dashboard/:path*'],
+  matcher: ['/dashboard', '/dashboard/:path*', '/relatorios', '/relatorios/:path*'],
 };

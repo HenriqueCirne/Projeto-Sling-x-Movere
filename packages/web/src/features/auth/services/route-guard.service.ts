@@ -1,4 +1,4 @@
-import { DEFAULT_AUTHENTICATED_PATH, LOGIN_PATH } from '../auth.contract';
+import { DEFAULT_AUTHENTICATED_PATH, LOGIN_PATH, REPORTS_PATH_PREFIX } from '../auth.contract';
 
 /**
  * Regras puras de proteção de rota (AC2).
@@ -9,12 +9,19 @@ import { DEFAULT_AUTHENTICATED_PATH, LOGIN_PATH } from '../auth.contract';
  */
 
 /**
- * Prefixos que exigem sessão. Ao criar uma nova área autenticada (a Story 1.5
- * traz o Painel), acrescente o prefixo aqui **e** coloque a rota sob
- * `src/app/(protected)/`. As duas coisas: o proxy é a rede de segurança, o
- * layout é a autorização de verdade.
+ * Prefixos que exigem sessão. Ao criar uma nova área autenticada, acrescente
+ * o prefixo aqui **e** em `src/proxy.ts#config.matcher` (o Next.js exige que
+ * o matcher do proxy seja um array estático — não dá para derivá-lo deste
+ * array em tempo de execução) **e** coloque a rota sob `src/app/(protected)/`.
+ * As três coisas: o proxy é a rede de segurança rápida (cookie), o layout é
+ * a autorização de verdade (sessão no banco).
+ *
+ * Story 2.1 esqueceu o passo do proxy ao adicionar `/relatorios` — descoberto
+ * só em teste manual (as rotas continuaram protegidas pelo layout, mas sem o
+ * atalho otimista). Ver MNT-002 no gate da Story 1.5, que já previu este
+ * exato risco.
  */
-export const PROTECTED_PATH_PREFIXES = [DEFAULT_AUTHENTICATED_PATH] as const;
+export const PROTECTED_PATH_PREFIXES = [DEFAULT_AUTHENTICATED_PATH, REPORTS_PATH_PREFIX] as const;
 
 export function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PATH_PREFIXES.some(

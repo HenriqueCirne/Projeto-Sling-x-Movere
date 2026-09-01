@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from 'react';
 
-import { formatCurrency } from '@/features/dashboard';
+// Import direto do módulo (não do barrel `@/features/dashboard`, que também
+// reexporta código que arrasta Prisma) — este é um Client Component.
+import { formatCurrency } from '@/features/dashboard/format';
 
 import type { DailyRevenuePoint } from '../faturamento-por-data.contract';
 import { groupByMonth } from '../group-by-month';
