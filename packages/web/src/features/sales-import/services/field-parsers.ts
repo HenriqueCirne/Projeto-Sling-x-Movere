@@ -126,13 +126,3 @@ export function parseDecimalNullable(
   if (isBlank(raw)) return ok(null);
   return parseDecimal(raw, fieldLabel, fractionDigits);
 }
-
-/** "Prazo Médio" (col. W) — inteiro, persistido bruto (TD-04, Achado 4). */
-export function parsePrazoMedio(raw: unknown): ParseResult<number> {
-  if (isBlank(raw)) return fail('"Prazo Médio" ausente ou vazio');
-  const n = typeof raw === 'number' ? raw : Number(String(raw).trim());
-  if (!Number.isFinite(n) || !Number.isInteger(n)) {
-    return fail(`"Prazo Médio" não é um número inteiro válido: ${JSON.stringify(raw)}`);
-  }
-  return ok(n);
-}

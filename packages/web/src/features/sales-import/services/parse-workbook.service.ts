@@ -5,7 +5,6 @@ import {
   parseDecimal,
   parseDecimalNullable,
   parseNullableString,
-  parsePrazoMedio,
   parseTipo,
   type ParseResult,
 } from './field-parsers';
@@ -38,7 +37,10 @@ function parseRow(rawRow: readonly unknown[], map: ColumnMap, rowNumber: number)
     parseDecimal(cell(rawRow, map, 'valorTotal'), 'Total Preço de Venda', 2),
     errors,
   );
-  const prazoMedio = unwrap(parsePrazoMedio(cell(rawRow, map, 'prazoMedio')), errors);
+  const prazoMedio = unwrap(
+    parseDecimal(cell(rawRow, map, 'prazoMedio'), 'Prazo Médio', 2),
+    errors,
+  );
 
   const loja = unwrap(parseNullableString(cell(rawRow, map, 'loja')), errors);
   const cliente = unwrap(parseNullableString(cell(rawRow, map, 'cliente')), errors);

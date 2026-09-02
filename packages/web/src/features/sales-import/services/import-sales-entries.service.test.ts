@@ -101,7 +101,7 @@ describe('importSalesEntries', () => {
       quantidade: '2.000',
       preco: '499.50',
       valorTotal: '999.00',
-      prazoMedio: 45,
+      prazoMedio: '45.00',
       loja: 'Loja 01',
       cliente: 'Cliente X',
       atendente: 'Atendente X',

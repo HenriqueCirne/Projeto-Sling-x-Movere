@@ -1,8 +1,9 @@
 {
-  // Typecheck de `prisma/seed.ts`, que roda fora do Next.js (via `tsx`) e por
-  // isso não é coberto pelo `tsc` de `packages/web`. Sem este projeto separado,
-  // um erro de tipo no seed só apareceria em produção, no pior momento
-  // possível: durante o provisionamento do primeiro acesso.
+  // Typecheck dos scripts de `prisma/` que rodam fora do Next.js (via `tsx`) e
+  // por isso não são cobertos pelo `tsc` de `packages/web`. Sem este projeto
+  // separado, um erro de tipo neles só apareceria em produção, no pior
+  // momento possível: durante o provisionamento do primeiro acesso (seed) ou
+  // no meio de uma importação de planilha real (import-sales-entries).
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2022"],
@@ -19,5 +20,5 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["prisma/seed.ts"]
+  "include": ["prisma/seed.ts", "prisma/import-sales-entries.ts"]
 }

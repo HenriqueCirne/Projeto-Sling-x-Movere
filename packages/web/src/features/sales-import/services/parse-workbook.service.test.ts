@@ -31,6 +31,7 @@ const HEADER = [
 const TIPO = 0;
 const PRECO = 8;
 const TOTAL = 9;
+const PRAZO = 11;
 
 function row(overrides: Partial<Record<number, unknown>> = {}): unknown[] {
   const base: unknown[] = [
@@ -71,7 +72,7 @@ describe('parseWorkbook', () => {
       quantidade: '2.000',
       preco: '775.00',
       valorTotal: '1550.00',
-      prazoMedio: 45,
+      prazoMedio: '45.00',
       cliente: 'Cliente X',
       numeroDocumento: '897699',
     });
@@ -85,6 +86,12 @@ describe('parseWorkbook', () => {
     expect(result.rejected).toHaveLength(1);
     expect(result.rejected[0]?.row).toBe(3); // cabeçalho=1, primeira linha=2, segunda=3
     expect(result.rejected[0]?.reason).toContain('Tipo');
+  });
+
+  it('aceita Prazo Médio fracionário (achado real da importação de 2026-09-02: maioria das linhas não é inteiro)', () => {
+    const result = parseWorkbook([HEADER, row({ [PRAZO]: 105.17 })]);
+    expect(result.rejected).toEqual([]);
+    expect(result.validRows[0]?.prazoMedio).toBe('105.17');
   });
 
   it('aceita Preço em branco (nullable no schema) sem rejeitar a linha', () => {

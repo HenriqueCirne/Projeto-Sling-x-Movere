@@ -5,7 +5,6 @@ import {
   parseDecimal,
   parseDecimalNullable,
   parseNullableString,
-  parsePrazoMedio,
   parseTipo,
 } from './field-parsers';
 
@@ -110,16 +109,5 @@ describe('parseDecimalNullable', () => {
 
   it('ainda rejeita valor presente mas inválido', () => {
     expect(parseDecimalNullable('abc', 'Preço', 2).ok).toBe(false);
-  });
-});
-
-describe('parsePrazoMedio', () => {
-  it('aceita inteiro', () => {
-    expect(parsePrazoMedio(45)).toEqual({ ok: true, value: 45 });
-  });
-
-  it('rejeita vazio e fracionário', () => {
-    expect(parsePrazoMedio(null).ok).toBe(false);
-    expect(parsePrazoMedio(45.5).ok).toBe(false);
   });
 });

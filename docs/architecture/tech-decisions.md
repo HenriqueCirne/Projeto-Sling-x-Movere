@@ -279,6 +279,22 @@ O stakeholder decidiu não esperar a resolução do bloqueio de permissão da AP
 - Uma nova capacidade de **importação de planilha → `sales_entries`** precisa ser especificada e implementada (story ainda não criada nesta sessão).
 - Como consequência de TD-02, o banco de desenvolvimento passou de "Docker local, decisão de produção em aberto (R3)" para **Supabase Postgres (Session Pooler)** já em uso — resolve R3 na prática, ainda que não formalmente ratificado como decisão de produção definitiva. Detalhe de conexão: a porta 5432 (Session Pooler) é obrigatória com Prisma — a porta 6543 (Transaction Pooler) quebra com `"prepared statement already exists"` por incompatibilidade entre PgBouncer/Supavisor em modo transação e prepared statements do Prisma.
 
+### Implementado e executado (2026-09-02)
+
+Feature `packages/web/src/features/sales-import/` (parsers puros e testados, 36 testes) + `prisma/import-sales-entries.ts` (CLI, mesmo padrão de `prisma/seed.ts`, sem alias `@/...`). Leitura da planilha via **`exceljs`**, não `xlsx`/SheetJS: a versão do SheetJS publicada no npm (0.18.5) tem duas vulnerabilidades HIGH sem correção (prototype pollution, ReDoS) — a versão corrigida só é distribuída pelo CDN próprio da SheetJS, fora do registro npm, e instalar de uma URL externa foi bloqueado pelo classificador de segurança do ambiente. `exceljs` não tem esse problema (só um `moderate` transitivo em `uuid`, não exercitado pelo caminho de leitura usado aqui).
+
+**Achado crítico corrigido antes da importação valer:** a primeira execução (`npm run db:import`) rejeitou 46% das linhas reais (10.923 de 23.724) porque `prazoMedio` estava modelado como `Int` — TD-04 tinha assumido "Prazo Médio" inteiro a partir de uma amostra pequena, mas a maioria das linhas reais é fracionária (ex: `105.17`, `45.5`, `33.67`, provavelmente uma média entre parcelas). Corrigido: `prazoMedio` agora é `Decimal(8,2)` (migração `20260902120000_change_prazo_medio_to_decimal`, gerada via `prisma migrate diff` porque `prisma migrate dev` exige um terminal interativo que este ambiente não tem). Reimportada a planilha depois da correção: **23.724/23.724 linhas válidas, 0 rejeitadas.**
+
+**Validado contra o banco após a importação** — bate exatamente com os números de referência do TD-04 (Achado 1, extraídos de `DOC/Dashboard_Vendas_Jul_Ago_2026.xlsx`), confirmando que `DOC/AGO.27.26-Planilha Dashboard.xlsx` é o mesmo período (Jul–Ago 2026), só re-exportado:
+
+| Métrica | TD-04 (planilha de referência) | Banco após importação |
+|---|---|---|
+| Faturamento total | R$ 10.394.644,52 | R$ 10.394.644,52 |
+| Quantidade total | 49.265 | 49.265 |
+| Vendas / Devoluções | 23.651 / 73 | 23.651 / 73 |
+
+**Performance do `exceljs`:** `eachRow`/`eachCell` com `includeEmpty: true` degrada catastroficamente em planilhas grandes (>60s sem terminar 23,7k linhas; sem essa opção, a mesma leitura leva ~150ms). O CLI usa `eachRow` sem `includeEmpty` e indexa por `row.number` (não por ordem de chegada) para não desalinhar a numeração de linha caso uma linha fique totalmente em branco no meio da planilha.
+
 ---
 
 ## Riscos abertos que exigem decisão humana (não técnica)
@@ -300,3 +316,4 @@ O stakeholder decidiu não esperar a resolução do bloqueio de permissão da AP
 | 2026-08-27 | 1.0 | Documento criado: TD-01 a TD-05, desbloqueio técnico da Epic 1. Achados TD-04 baseados em análise dos dados reais de `DOC/Dashboard_Vendas_Jul_Ago_2026.xlsx` | Aria (@architect) |
 | 2026-08-31 | 1.1 | Spike técnico da API Moveres executado (TD-03) — ver `docs/architecture/api-moveres-contract-spike.md`. Autenticação/paginação/incremento confirmados; bloqueio encontrado no acesso a itens de linha e parcelas (grupo de permissão "SEM ACESSO"). R2 atualizado: de "contrato não validado" para "permissão da conta bloqueia itens de linha" — Story 1.4 continua bloqueada até ação do stakeholder junto ao Moveres | Dex (@dev) |
 | 2026-09-01 | 1.2 | TD-06 (remoção da exigência de login, decisão de stakeholder, sobrepõe NFR3) e TD-07 (importação de planilha substitui sync automático enquanto R2 não é resolvido; Supabase Postgres em uso, resolvendo R3 na prática) registrados | Dex (@dev) |
+| 2026-09-02 | 1.3 | TD-07 implementado e executado: feature `sales-import` + CLI `db:import`. Achado corrigido antes de valer: `prazoMedio` (col. W) é fracionário na maioria das linhas reais, não inteiro como o TD-04 assumiu — schema alterado de `Int` para `Decimal(8,2)` (migração `20260902120000_change_prazo_medio_to_decimal`). Planilha `DOC/AGO.27.26-Planilha Dashboard.xlsx` importada com sucesso: 23.724/23.724 linhas, faturamento e quantidade batendo exatamente com os números de referência do TD-04 | Dex (@dev) |

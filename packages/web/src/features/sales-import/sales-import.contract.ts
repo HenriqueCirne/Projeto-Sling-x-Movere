@@ -27,7 +27,7 @@ export type ParsedSalesEntryRow = {
   preco: string | null;
   valorTotal: string;
   quantidade: string;
-  prazoMedio: number;
+  prazoMedio: string;
 };
 
 /** Linha da planilha rejeitada, com o motivo e o número de linha do Excel (cabeçalho = linha 1). */

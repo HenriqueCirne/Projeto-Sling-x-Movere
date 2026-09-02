@@ -204,11 +204,15 @@ model SalesEntry {
   quantidade Decimal @db.Decimal(12, 3)
 
   /// "Prazo Médio" (col. W, preenchido em 100% das linhas — TD-04 Achado 4).
-  /// Persistido BRUTO (dias). As faixas de prazo do FR5 são derivadas na
-  /// camada de consulta/relatório (Epic 2/3) — os limites das faixas não
-  /// estão documentados em lugar nenhum (R5) e essa é uma decisão de negócio
+  /// Persistido BRUTO (dias). `Decimal`, não `Int`: TD-04 assumiu inteiro a
+  /// partir de uma amostra pequena — a importação real (TD-07, 2026-09-02)
+  /// mostrou que a maioria das linhas tem prazo fracionário (ex: 105.17,
+  /// 45.5, 33.67 — provavelmente uma média entre parcelas), e `Int` rejeitava
+  /// 46% das linhas reais. As faixas de prazo do FR5 são derivadas na camada
+  /// de consulta/relatório (Epic 2/3) — os limites das faixas não estão
+  /// documentados em lugar nenhum (R5) e essa é uma decisão de negócio
   /// pendente, não desta story.
-  prazoMedio Int @map("prazo_medio")
+  prazoMedio Decimal @map("prazo_medio") @db.Decimal(8, 2)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
