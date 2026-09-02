@@ -1,0 +1,59 @@
+schema: 1
+story: '1.4'
+story_title: 'Job de sincronização diária com a API Moveres Software'
+gate: CONCERNS
+status_reason: 'AC2, AC3, AC4 e AC5 implementadas e verificadas (testes unitários + smoke test real contra a API e o Supabase). AC1 (agendamento automático) foi deliberadamente adiada por decisão de escopo já registrada pelo @po (Change Log 0.2, 2026-08-27): depende de uma decisão de hospedagem (R3) ainda em aberto, fora do controle desta story. Duas dimensões de dado ficam sem mapeamento confirmado (classificação de item, condição de pagamento) — documentado, não inventado. Nenhum problema bloqueante de segurança ou correção encontrado.'
+reviewer: 'Quinn (Test Architect)'
+reviewed_revision: 'commit:d819682'
+updated: '2026-09-02T17:25:00Z'
+
+top_issues:
+  - id: 'REQ-001'
+    severity: medium
+    finding: 'AC1 ("Job agendado autentica...") não está atendida no sentido de agendamento automático — não existe cron/scheduled job configurado. O gatilho manual (AC4) está completo e é o caminho oficial de execução hoje. Esta é uma decisão de escopo pré-existente (@po, 2026-08-27), não uma falha de implementação: a hospedagem do projeto (R3) ainda não foi decidida, e o mecanismo de agendamento depende diretamente dela (Vercel Cron vs. GitHub Actions vs. outro).'
+    suggested_action: 'Quando R3 for decidido, abrir uma sub-task para @devops configurar o agendamento chamando `npm run sync:moveres` com o período do dia anterior — o job em si não precisa de nenhuma mudança.'
+
+  - id: 'DATA-001'
+    severity: medium
+    finding: 'Linhas sincronizadas via ERP não têm `familia`/`grupo`/`marca`/`linha` nem `condicaoPagamento` preenchidos — a API não expõe um vínculo confirmado entre item vendido e sua classificação de categoria, nem entre uma parcela e um `codigoCondicao` de pagamento (Achado 8 do spike, pendências 1 e 2). Isso é diferente da importação de planilha (TD-07), que traz essas dimensões completas. Os relatórios 2.2 (Vendas por Item), 2.3 (Vendas por Item por Loja) e 3.2 (Tipo de Preço × Loja × Item) dependem de família/grupo/marca/linha e mostrariam "Não informado" para qualquer período sincronizado via ERP em vez da planilha.'
+    suggested_action: 'Investigar `EstruturasDeItens`/`ProdutosConsultaAvancada` (grupo movere-inteligente) para achar o lookup de classificação por `codigo` do produto antes de usar o ERP sync como fonte primária de dados de produção. Até lá, a decisão do usuário (2026-09-02) foi manter a planilha como fonte principal — ver Dev Notes/Completion Notes da story.'
+
+  - id: 'DATA-002'
+    severity: low
+    finding: '"Devolução" não é classificada pelo mapper — nenhuma nota com essa assinatura apareceu em nenhuma amostra testada (spike original, Achado 8, nem no smoke test de 2026-08-03). O mapper só reconhece `descricaoentradaesaida === "VENDAS DE MERCADORIAS/SERVIÇOS"`; qualquer outro tipo (incluindo uma eventual devolução) é ignorado, não gravado como `tipo: DEVOLUCAO`. Correto do ponto de vista de "não inventar" (Artigo IV), mas significa que faturamento sincronizado via ERP não desconta devoluções automaticamente, ao contrário da planilha.'
+    suggested_action: 'Quando uma nota de devolução real aparecer numa sincronização, capturar a amostra (redigida) e atualizar `map-nota-to-sales-entries.ts` com a assinatura correta antes de confiar no ERP sync para períodos com devoluções conhecidas.'
+
+  - id: 'TEST-001'
+    severity: low
+    finding: 'Cobertura forte em nível de lógica pura (30 testes: cliente HTTP com fetch mockado, schema Zod contra fixture no formato real, mapper, orquestração com isolamento de falha) mas nenhum teste de integração automatizado contra Postgres real — o smoke test de 2026-08-03 foi manual, via CLI, não faz parte da suíte `npm test`. Mesma limitação estrutural já registrada em gates anteriores deste projeto (ausência de Docker/WSL nesta máquina para um banco de integração dedicado); aqui mitigada pelo smoke test real ter sido de fato executado e documentado (Debug Log References da story), não apenas planejado.'
+    suggested_action: 'Se um ambiente de CI com Postgres ficar disponível, adicionar um teste de integração que roda `syncMoveres` contra um banco de teste real, sem depender da API Moveres ao vivo (usar as fixtures já criadas em `nota-fiscal.schema.test.ts`).'
+
+  - id: 'PROC-001'
+    severity: low
+    finding: 'O smoke test real (2026-08-03) sincronizou dados via ERP e temporariamente sobrescreveu a origem daquele dia (planilha → ERP), removendo a classificação de item para esse dia específico. Foi corretamente revertido na mesma sessão (reimportação da planilha), mas é um lembrete de que qualquer execução real de `sync:moveres` contra dados de produção tem efeito imediato e substitui a janela loja+data sem confirmação — não há modo "dry-run".'
+    suggested_action: 'Considerar uma flag `--dry-run` no CLI antes de qualquer uso rotineiro em produção, para inspecionar o resumo (notas lidas/ignoradas, linhas que seriam afetadas) sem escrever no banco.'
+
+waiver: { active: false }
+
+evidence:
+  validacoes_reexecutadas_pelo_qa:
+    - command: 'npm run lint'
+      result: 'PASS — sem erros'
+    - command: 'npm run typecheck'
+      result: 'PASS — sem erros (workspace web + tsconfig.seed.json, que agora inclui prisma/sync-moveres.ts)'
+    - command: 'npm test'
+      result: 'PASS — 194 testes / 32 arquivos (30 novos desta story)'
+    - command: 'npm run build'
+      result: 'PASS — build de produção OK, todas as 8 rotas de relatório + /dashboard dinâmicas'
+    - command: 'npm run sync:moveres -- 2026-08-03 2026-08-03 (smoke test real, API Moveres + Supabase)'
+      result: 'PASS — 10/10 lojas sincronizadas, 0 erros, 550 linhas gravadas. Revertido em seguida via reimportação da planilha (decisão do usuário: manter planilha como fonte primária por ora)'
+  acceptance_criteria:
+    AC1: 'NOT MET (REQ-001, por decisão de escopo pré-existente) — agendamento automático depende de R3 (hospedagem), delegado a @devops'
+    AC2: 'MET — busca por período + substituição idempotente por loja (`replaceSalesEntriesWindow`, TD-04b), testado e validado ao vivo'
+    AC3: 'MET — log estruturado por loja no console, testado (`onLojaResult`)'
+    AC4: 'MET — `npm run sync:moveres -- <de> <até>`, testado ao vivo'
+    AC5: 'MET — falha isolada por loja (testado: uma loja com erro HTTP não impede as demais)'
+  refactoring_performed:
+    - file: 'packages/web/src/shared/sales-entries/replace-window.repository.ts (novo, extraído de sales-import)'
+      change: 'replaceSalesEntriesWindow ganhou parâmetro opcional de escopo por loja'
+      why: 'TD-04b define a janela idempotente como (Data de Emissão + Loja), não só data — a importação de planilha original só escopava por data (correto para ela, um dump de todas as lojas de uma vez), mas sincronizar uma loja via ERP sem esse escopo apagaria dados de outras lojas no mesmo período. Bug real, corrigido antes de causar dano (nenhuma versão sem o fix chegou a rodar contra produção)'
