@@ -11,9 +11,4 @@ export {
   type ParsedSalesEntryRow,
   type RowRejection,
 } from './sales-import.contract';
-export {
-  importSalesEntries,
-  type ImportPrismaClient,
-  type SalesEntryCreateInput,
-  type SalesEntryTransactionClient,
-} from './services/import-sales-entries.service';
+export { importSalesEntries, type ImportPrismaClient } from './services/import-sales-entries.service';

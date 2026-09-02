@@ -1,11 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import type { SalesEntryRow } from '../../../shared/sales-entries/sales-entry.contract';
 import { SalesImportError } from '../sales-import.contract';
-import {
-  importSalesEntries,
-  type ImportPrismaClient,
-  type SalesEntryCreateInput,
-} from './import-sales-entries.service';
+import { importSalesEntries, type ImportPrismaClient } from './import-sales-entries.service';
 
 const HEADER = [
   'Tipo',
@@ -52,7 +49,7 @@ function row(data: string, total: number, tipo = 'Venda'): unknown[] {
 }
 
 /** Fake in-memory do slice de Prisma que o serviço precisa, sem tocar em banco. */
-function createFakePrisma(initialRows: SalesEntryCreateInput[] = []) {
+function createFakePrisma(initialRows: SalesEntryRow[] = []) {
   let store = [...initialRows];
   const deleteMany = vi.fn(async (args: { where: { dataEmissao: { gte: Date; lte: Date } } }) => {
     const before = store.length;
@@ -63,7 +60,7 @@ function createFakePrisma(initialRows: SalesEntryCreateInput[] = []) {
     );
     return { count: before - store.length };
   });
-  const createMany = vi.fn(async (args: { data: SalesEntryCreateInput[] }) => {
+  const createMany = vi.fn(async (args: { data: SalesEntryRow[] }) => {
     store.push(...args.data);
     return { count: args.data.length };
   });
@@ -94,7 +91,7 @@ describe('importSalesEntries', () => {
     expect(getStore()).toHaveLength(2);
   });
 
-  function fixtureEntry(dataEmissao: string): SalesEntryCreateInput {
+  function fixtureEntry(dataEmissao: string): SalesEntryRow {
     return {
       tipo: 'VENDA',
       dataEmissao: new Date(dataEmissao),

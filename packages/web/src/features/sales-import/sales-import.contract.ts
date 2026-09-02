@@ -8,27 +8,12 @@
  * Racional completo da importação: `docs/architecture/tech-decisions.md#TD-07`.
  */
 
-/** Uma linha de `sales_entries` já validada e pronta para `createMany`. */
-export type ParsedSalesEntryRow = {
-  idLancamento: string | null;
-  numeroDocumento: string | null;
-  tipo: 'VENDA' | 'DEVOLUCAO';
-  dataEmissao: Date;
-  loja: string | null;
-  cliente: string | null;
-  atendente: string | null;
-  item: string | null;
-  familia: string | null;
-  grupo: string | null;
-  marca: string | null;
-  linha: string | null;
-  tipoPreco: string | null;
-  condicaoPagamento: string | null;
-  preco: string | null;
-  valorTotal: string;
-  quantidade: string;
-  prazoMedio: string;
-};
+/**
+ * Uma linha de `sales_entries` já validada e pronta para `createMany`.
+ * Alias mantido por compatibilidade — o tipo mora em `shared/sales-entries`
+ * (compartilhado com `features/erp-sync`, Story 1.4).
+ */
+export type { SalesEntryRow as ParsedSalesEntryRow } from '../../shared/sales-entries/sales-entry.contract';
 
 /** Linha da planilha rejeitada, com o motivo e o número de linha do Excel (cabeçalho = linha 1). */
 export type RowRejection = {

@@ -20,5 +20,5 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["prisma/seed.ts", "prisma/import-sales-entries.ts"]
+  "include": ["prisma/seed.ts", "prisma/import-sales-entries.ts", "prisma/sync-moveres.ts"]
 }
