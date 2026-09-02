@@ -17,11 +17,11 @@
 |---|------|---------|--------|
 | TD-01 | Provedor de autenticação | **Auth.js (NextAuth v5) — Credentials + sessão em banco** | ✅ Decidido |
 | TD-02 | Banco de dados | **PostgreSQL 16, acesso vendor-neutro via `DATABASE_URL` + Prisma; Docker local no dev** | ✅ Decidido |
-| TD-03 | API Moveres Software | **Não validável sem credenciais — risco em aberto, exige spike antes da 1.4** | ⚠️ Risco aberto |
+| TD-03 | API Moveres Software | **Validada com dado real — itens de linha e parcelas disponíveis (Achado 8, 2026-09-02 retrata o bloqueio anterior)** | ✅ Resolvido |
 | TD-04 | Ticket Médio (1.3 × 1.5) | **Paridade confirmada por dado real: é por LINHA. Schema deve carregar `Nº documento` mesmo assim** | ✅ Decidido (com pergunta de negócio aberta) |
 | TD-05 | Pipeline de CI (1.1 AC4) | **Delegação exclusiva ao @devops — não é tarefa do @dev** | ✅ Esclarecido |
 | TD-06 | Autenticação (Stories 1.2/1.5) | **Tela de login removida da rota obrigatória — decisão explícita do stakeholder, sobrepõe a NFR3** | ⚠️ Decisão de negócio registrada |
-| TD-07 | Fonte de dados (Story 1.4) | **Sincronização automática com a API Moveres substituída por importação manual de planilha, enquanto o acesso a itens de linha permanecer bloqueado (R2)** | ✅ Decidido |
+| TD-07 | Fonte de dados (Story 1.4) | **Importação manual de planilha, como caminho complementar à sincronização automática — R2 deixou de bloquear (2026-09-02)** | ✅ Decidido |
 
 ---
 
@@ -148,6 +148,26 @@ Documento completo: `docs/architecture/api-moveres-contract-spike.md`. Resumo:
 bloqueado por permissão"** — uma ação humana (verificar com o administrador da conta
 Moveres/suporte por que o grupo é "SEM ACESSO") substitui a necessidade de mais
 investigação técnica. **A Story 1.4 continua bloqueada** até essa ação ser resolvida.
+
+### ✅ Atualização (2026-09-02) — Bloqueio RETRATADO: era bug de casing, não permissão
+
+O usuário passou uma informação de outro projeto que integra a mesma API Moveres usando
+`GET /api/NotasFiscaisEmitidas` com sucesso — motivo suficiente para reabrir o Achado 4
+em vez de aceitá-lo como definitivo. Resultado, documentado em detalhe no Achado 8 de
+`docs/architecture/api-moveres-contract-spike.md`:
+
+**O bloqueio nunca existiu de verdade.** O spike original verificava `nf.produtos`/
+`nf.parcelas` (minúsculos, como o Swagger documenta) — mas a resposta real usa
+`Produtos`/`Parcelas` (maiúsculos). JavaScript é case-sensitive: isso retorna
+`undefined` silenciosamente em vez de um erro, e foi mal-interpretado como "vazio". É
+exatamente a mesma classe de bug que o próprio Achado 3 já tinha documentado para
+`NF`/`nf` — só que dessa vez num nível aninhado, não pego na primeira passada.
+
+Reteste em 2026-09-02, mesma conta, **sem qualquer mudança de permissão** (`grupo`
+continua `"SEM ACESSO"`): 100/100 notas de uma janela de 2 meses vêm com `Produtos`
+preenchido, 92/100 com `Parcelas`. R2 está **resolvido — não bloqueia mais a Story
+1.4.** TD-07 (importação de planilha) não precisa ser desfeito; passa a ser um caminho
+complementar (backfill/correção manual) em vez do único caminho de dados.
 
 ---
 
@@ -302,7 +322,7 @@ Feature `packages/web/src/features/sales-import/` (parsers puros e testados, 36 
 | # | Questão | Bloqueia | Quem decide |
 |---|---|---|---|
 | R1 | **Ticket Médio é por linha (R$ 438,15) ou por venda (R$ 978,87)?** Hoje a planilha usa por linha; o schema vai suportar ambos | Não bloqueia a 1.5 (paridade prevalece) | Gestor / @po |
-| R2 | **Permissão da conta Moveres bloqueia itens de linha/parcelas** (grupo "SEM ACESSO" — spike de 2026-08-31 confirmou paginação/incremento, mas não itens de linha) | **BLOQUEIA a Story 1.4** | Stakeholder (ajustar permissão junto ao Moveres/administrador da conta) |
+| R2 | ~~Permissão da conta Moveres bloqueia itens de linha/parcelas~~ **RESOLVIDO 2026-09-02** — era bug de casing no spike (Achado 8), não permissão. `Produtos`/`Parcelas` confirmados presentes (100%/92% de 100 notas testadas) | Não bloqueia mais nada | — |
 | R3 | **Hospedagem** (cloud, Postgres gerenciado ou servidor local da loja) | Resolvido na prática para o banco — **Supabase Postgres** em uso (ver TD-07). Hospedagem da aplicação em si (Vercel/Railway/outro) continua em aberto | Stakeholder |
 | R4 | **Backfill histórico** — dashboard começa no go-live ou importa histórico anterior a Jul/2026? Muda o volume e o custo do primeiro sync | Afeta escopo da 1.4 | Stakeholder |
 | R5 | **Limites das faixas de Prazo Médio** (FR5) — não documentados em lugar nenhum | Bloqueia Epic 2/3, não a Epic 1 | Gestor / @po |
@@ -317,3 +337,4 @@ Feature `packages/web/src/features/sales-import/` (parsers puros e testados, 36 
 | 2026-08-31 | 1.1 | Spike técnico da API Moveres executado (TD-03) — ver `docs/architecture/api-moveres-contract-spike.md`. Autenticação/paginação/incremento confirmados; bloqueio encontrado no acesso a itens de linha e parcelas (grupo de permissão "SEM ACESSO"). R2 atualizado: de "contrato não validado" para "permissão da conta bloqueia itens de linha" — Story 1.4 continua bloqueada até ação do stakeholder junto ao Moveres | Dex (@dev) |
 | 2026-09-01 | 1.2 | TD-06 (remoção da exigência de login, decisão de stakeholder, sobrepõe NFR3) e TD-07 (importação de planilha substitui sync automático enquanto R2 não é resolvido; Supabase Postgres em uso, resolvendo R3 na prática) registrados | Dex (@dev) |
 | 2026-09-02 | 1.3 | TD-07 implementado e executado: feature `sales-import` + CLI `db:import`. Achado corrigido antes de valer: `prazoMedio` (col. W) é fracionário na maioria das linhas reais, não inteiro como o TD-04 assumiu — schema alterado de `Int` para `Decimal(8,2)` (migração `20260902120000_change_prazo_medio_to_decimal`). Planilha `DOC/AGO.27.26-Planilha Dashboard.xlsx` importada com sucesso: 23.724/23.724 linhas, faturamento e quantidade batendo exatamente com os números de referência do TD-04 | Dex (@dev) |
+| 2026-09-02 | 1.4 | TD-03 RETRATADO: o bloqueio de itens de linha/parcelas da API Moveres (R2) nunca foi um problema de permissão — era um bug de casing no spike original (`produtos`/`parcelas` vs `Produtos`/`Parcelas`, mesma classe de erro do Achado 3, não pega na primeira passada). Reteste com a mesma conta (sem mudança de permissão) confirma dado real disponível. Ver Achado 8 em `docs/architecture/api-moveres-contract-spike.md`. Story 1.4 liberada para implementação; R2 fechado | Dex (@dev) |

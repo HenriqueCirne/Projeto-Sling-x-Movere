@@ -2,7 +2,7 @@
 
 **Autor:** Dex (@dev)
 **Data:** 2026-08-31
-**Status:** Concluído com **bloqueio** — ver "Resultado" abaixo
+**Status:** ✅ Concluído — bloqueio original **retratado** em 2026-09-02 (Achado 8): era um bug de casing no próprio spike, não uma restrição do Moveres. Story 1.4 liberada.
 **Contexto:** Executado a pedido do usuário, seguindo a recomendação do @architect em
 `docs/architecture/tech-decisions.md` (TD-03): "Criar uma story de spike técnico...
 executada por @dev, com as credenciais reais, ANTES de iniciar a Story 1.4."
@@ -15,22 +15,30 @@ executada por @dev, com as credenciais reais, ANTES de iniciar a Story 1.4."
 
 ---
 
-## Resultado (resumo executivo)
+## Resultado (resumo executivo) — 🔄 ATUALIZADO EM 2026-09-02, VER ACHADO 8
+
+> **O bloqueio do Achado 4 foi RETRATADO em 2026-09-02 (Achado 8).** Não era uma
+> restrição de permissão do Moveres — era um bug de *casing* neste próprio spike,
+> exatamente a classe de erro que o Achado 3 já tinha alertado, só que desta vez nos
+> campos aninhados (`produtos`/`Produtos`, `parcelas`/`Parcelas`) em vez do campo raiz
+> (`nf`/`NF`). **Os itens de linha e as parcelas SEMPRE estiveram lá.**
 
 | Risco do TD-03 | Status após o spike |
 |---|---|
-| Cobertura de campos | ⚠️ **PARCIAL — BLOQUEIO ENCONTRADO** (ver Achado 4) |
+| Cobertura de campos | ✅ **RESOLVIDO (Achado 8)** — `Produtos`/`Parcelas` (casing correto) vêm preenchidos em 100%/92% das notas testadas |
 | Consulta incremental | ✅ Validado — filtro por `emissaoInicial`/`emissaoFinal` (obrigatórios) |
 | Paginação | ✅ Validado — parâmetro `pagina` (offset por página, não cursor) |
-| Rate limits | ❌ Ainda não validado (poucas chamadas feitas; não houve erro 429 nas ~10 chamadas do spike) |
+| Rate limits | ❌ Ainda não validado (poucas chamadas feitas; não houve erro 429 em nenhuma sessão do spike) |
 | Chave estável de linha | ✅ Confirmado que NÃO existe (consistente com TD-04 Achado 3) — reforça que a decisão da Story 1.3 (sem `@unique`) estava correta |
 
-**🛑 Não recomendo iniciar a implementação da Story 1.4 antes de resolver o Achado 4.**
-As credenciais `MOVERE_API_*` atuais retornam o cabeçalho de cada nota fiscal (cliente,
-vendedor, valor total, data de emissão) mas **os itens de linha e as parcelas vêm
-sempre vazios** — e o endpoint dedicado a itens de linha devolve **zero resultados**.
-Sem itens de linha não é possível popular `item`, `familia`, `grupo`, `marca`, `linha`,
-nem `quantidade`/`preco` por item — os campos centrais de FR3, FR4, FR8 e FR9.
+**✅ A Story 1.4 pode ser implementada.** `GET /api/NotasFiscaisEmitidas` retorna o
+cabeçalho da nota **e** os itens de linha (`Produtos`) **e** as parcelas (`Parcelas`)
+num único payload — não é preciso o endpoint dedicado
+`NotasFiscaisEmitidasPorEstruturaDeItens` (que continua vazio, mas deixou de ser
+necessário: Achado 8). `item`/`quantidade`/`preco` por item (FR3, FR4, FR8, FR9) são
+populáveis a partir de `Produtos`. `familia`/`grupo`/`marca`/`linha` (classificação do
+item) ainda precisam de um lookup por `codigo` contra um catálogo — não confirmado
+neste spike, fica para a implementação da 1.4.
 
 ---
 
@@ -95,7 +103,11 @@ contra o Swagger — e o spike recomenda um teste de contrato (ex: fixture de re
 real, redigida) para pegar futuras mudanças de casing/schema sem depender de rodar
 contra o ambiente real a cada CI.
 
-## Achado 4 — 🛑 BLOQUEIO: itens de linha e parcelas não retornam dados
+## Achado 4 — ~~🛑 BLOQUEIO: itens de linha e parcelas não retornam dados~~ ❌ RETRATADO (ver Achado 8)
+
+> **Este achado estava ERRADO.** O texto original abaixo foi mantido intacto por
+> transparência (não é reescrito silenciosamente), mas a conclusão não vale mais —
+> ver Achado 8 para a causa raiz (bug de casing neste spike) e a correção.
 
 Testado com a conta configurada, loja `1` (codigoEstabelecimento), duas janelas de
 data (`2026-08-03` isolado, e `2026-07-01`–`2026-08-31` mais larga):
@@ -194,24 +206,98 @@ uma permissão pontual (algo como "ver produtos em documentos fiscais"), não um
 reconfiguração ampla da conta — vale citar isso ao suporte Moveres para agilizar o
 diagnóstico deles.
 
-## Recomendação
+## Achado 8 (2026-09-02) — ✅ RETRATA o Achado 4: era um bug de casing neste spike, não um bloqueio de permissão
 
-1. **Não iniciar a implementação da Story 1.4 agora.** O Achado 4 é um bloqueio real,
-   não uma dúvida de design — sem resolver isso, qualquer código escrito para
-   itens/parcelas seria especulativo (violaria o Artigo IV da Constitution, "No
-   Invention").
-2. **Ação humana necessária:** verificar com o administrador da conta Moveres (ou
-   suporte Moveres) por que o grupo de permissão retornado é `"SEM ACESSO"` e se existe
-   um grupo/permissão que habilite os endpoints de item de linha
-   (`NotasFiscaisEmitidasPorEstruturaDeItens`, `Itens`) e parcelas.
-3. Depois de resolvido, repetir os testes deste spike (o `spike.js`/`spike2.js`/`spike3.js`
-   usados aqui ficaram só no scratchpad da sessão, não foram commitados — reproduzíveis
-   a partir da lista de endpoints e parâmetros documentada acima) para confirmar que os
-   arrays `produtos`/`parcelas` passam a vir preenchidos, e então mapear o Achado 5
-   (discriminador Venda/Devolução/Outras Saídas) com uma amostra maior antes de
-   escrever o anti-corruption layer da Story 1.4.
-4. Nenhuma mudança é necessária no schema `sales_entries` da Story 1.3 — todos os campos
-   já modelados continuam corretos; o problema é de acesso aos dados, não de modelagem.
+O usuário trouxe uma informação externa: outro projeto que integra com a mesma API
+Moveres usa `GET /api/NotasFiscaisEmitidas` (o endpoint simples, sem sufixo) e consegue
+os itens de linha normalmente. Isso motivou reabrir o Achado 4 em vez de aceitá-lo como
+definitivo.
+
+**Causa raiz encontrada:** o Achado 3 já tinha documentado que o Swagger usa `nf`
+minúsculo mas a resposta real usa `NF` maiúsculo. **O mesmo problema existe um nível
+abaixo, e o spike original não pegou:** o Swagger documenta `produtos`/`parcelas`
+(minúsculos), mas a resposta real usa **`Produtos`/`Parcelas`** (maiúsculos). O código
+do spike original verificava `nf.produtos`/`nf.parcelas` — que em JavaScript, sendo
+case-sensitive, retorna `undefined` em vez de lançar erro. `undefined` foi
+interpretado como "vazio", quando na verdade a chave certa nunca foi consultada.
+
+**Reteste em 2026-09-02, mesma conta (`MOVERE_API_*`), sem nenhuma mudança de permissão:**
+
+- Login confirma `grupo: {codigo: 5, nome: "SEM ACESSO"}` — **igual ao Achado 2, sem
+  mudança.** A hipótese de bloqueio por permissão nunca foi verdadeira para este dado.
+- `GET /api/NotasFiscaisEmitidas` (loja 1, `2026-08-03`, 17 notas): **17/17 notas com
+  `Produtos` preenchido** (39 itens). Amostra de um item: `{codigo, descricao,
+  codFabricacao, quantidade, precounitario, precotabela, custocompra, custoreposicao,
+  valortotalitem}` — dados plausíveis, com nome de item completo (`descricao`, ex: "P
+  225/75R16C 10L 118/116R H-188").
+- Mesma loja, janela larga (`2026-07-01`–`2026-08-31`, 100 notas): **100/100 com
+  `Produtos`** (175 itens) e **92/100 com `Parcelas`** preenchido (os 8 sem parcela são
+  provavelmente à vista — condizente com `diasDasParcelas: "0"` de "DINHEIRO" no
+  catálogo `CondicoesDePagamento`). Amostra de uma parcela: `{iddocumento, idparcela,
+  sequencianoportador, idserie, idestab, dtalancto, dtaemissao, dtavencto,
+  valordocumento, valorsaldoreceber, nossonumero, valorabatimento, valormoradiaria,
+  idsituacaotitulo, idtipodocumento, idtransacao, idportadororiginal, idportador}`.
+- Achado colateral: existe também uma chave `Cancelamento` (maiúscula) a nível de nota
+  — `{dtacancelamento, motivocancelamento, idusuariocancelamento}`, presente só em
+  notas canceladas. Não confirmado ainda se é o equivalente ao "Devolução" da planilha
+  de referência (TD-04) — pode ser um conceito diferente (nota cancelada por erro
+  operacional, não devolução de mercadoria). Fica como pendência para a 1.4: nenhuma
+  das 100 notas da amostra tinha `idtipoentradasaida` correspondente a devolução, então
+  não há dado real ainda para confirmar o mapeamento.
+- Achado 5 (discriminador Venda/Transferência/Outras Saídas) **continua válido** —
+  reconfirmado na mesma amostra de 100 notas: 93 vendas (`id=1` e `id=2`), 6
+  transferências, 1 garantia. O filtro por `idtipoentradasaida` continua necessário.
+- O Swagger não documenta nenhum parâmetro de query para "incluir produtos" — os únicos
+  parâmetros de `/api/NotasFiscaisEmitidas` são `codigoLoja`, `emissaoInicial`,
+  `emissaoFinal` (todos obrigatórios) e `pagina` (opcional). `Produtos`/`Parcelas` vêm
+  sempre embutidos na resposta, sem precisar pedir.
+
+**O que ainda falta (não é bloqueio, é trabalho normal de implementação):**
+
+1. **Classificação do item** (`familia`/`grupo`/`marca`/`linha`): `Produtos[].codigo`
+   dá o código do item, mas não a classificação — precisa de um lookup contra um
+   catálogo (candidato: `EstruturasDeItens`, grupo `movere-inteligente`, já confirmado
+   funcionando no Achado 7, mas cujo formato exato de resposta não foi mapeado campo a
+   campo neste spike).
+2. **Condição de Pagamento por nota**: nenhum campo de `Parcelas` bate obviamente com
+   `codigoCondicao` do catálogo `CondicoesDePagamento` (testado: `idtipodocumento`,
+   `idportador`/`idportadororiginal` não têm correspondência clara na amostra) — a
+   pendência do Achado 6 permanece, mas agora com o dado de `Parcelas` disponível para
+   investigar de verdade, em vez de bloqueada por um array vazio.
+3. **`NotasFiscaisEmitidasPorEstruturaDeItens` continua retornando vazio** — não importa
+   mais: `/api/NotasFiscaisEmitidas` sozinho já traz tudo. Não precisa mais investigar
+   por que o endpoint dedicado está quebrado.
+
+**Lição de processo, para não repetir:** o Achado 3 já tinha alertado exatamente sobre
+esse risco de casing — "um cliente HTTP escrito estritamente a partir do Swagger...
+falharia silenciosamente" — mas o próprio spike não aplicou a lição consistentemente em
+todos os níveis do payload, só no nível raiz (`NF`). Ao escrever o anti-corruption layer
+da Story 1.4, validar a resposta real (Zod) contra a casing observada em produção **em
+TODOS os níveis aninhados**, não só no topo — e testar com um objeto real, nunca assumir
+que o Swagger está certo sobre nomes de campo.
+
+## Recomendação — 🔄 ATUALIZADA (Achado 8, 2026-09-02)
+
+1. **✅ A Story 1.4 pode ser implementada.** O bloqueio do Achado 4 foi retratado — não
+   é mais necessário esperar nenhuma ação humana junto ao Moveres.
+2. Escrever o anti-corruption layer com Zod validando a casing **real** de cada nível
+   aninhado (`NF`, `Produtos`, `Parcelas`, `Comercial`, `Cliente`, `NFe`, `Cancelamento`
+   — todos maiúsculos no nível do campo, conforme observado neste spike), não a do
+   Swagger. Escrever um teste de contrato (fixture redigida) para pegar mudança de
+   casing/schema sem depender do ambiente real a cada CI.
+3. Antes de codificar, resolver as duas pendências abertas do Achado 8: (a) de onde vem
+   `familia`/`grupo`/`marca`/`linha` do item (`EstruturasDeItens`, não mapeado em
+   detalhe ainda) e (b) como ligar uma `Parcela` a um `codigoCondicao` de
+   `CondicoesDePagamento`. Nenhuma delas bloqueia o essencial (item, quantidade, preço,
+   faturamento) — só refinam dimensões secundárias.
+4. Mapear o discriminador Venda/Devolução (Achado 5) com uma amostra que realmente
+   contenha devoluções — a amostra de 100 notas deste spike não tinha nenhuma; útil
+   avaliar se `Cancelamento` é o campo certo ou se é outro conceito.
+5. Nenhuma mudança é necessária no schema `sales_entries` da Story 1.3 — todos os campos
+   já modelados continuam corretos.
+6. TD-07 (importação de planilha) não precisa ser descontinuada — pode conviver com a
+   1.4 como um caminho de backfill/correção manual, mesmo depois do sync automático
+   existir.
 
 ## Change Log
 
@@ -219,3 +305,4 @@ diagnóstico deles.
 |---|---|---|---|
 | 2026-08-31 | 1.0 | Spike técnico executado com credenciais reais (`.env`). Endpoints reais descobertos via `discoveryPaths` do Swagger UI. Autenticação, paginação e filtro incremental confirmados. Bloqueio encontrado: itens de linha e parcelas retornam vazios para a conta configurada (grupo "SEM ACESSO") | Dex (@dev) |
 | 2026-09-01 | 1.1 | Achado 7: testados mais 7 endpoints em busca de um caminho alternativo para item-de-venda (pergunta do usuário). Nenhum resolve o bloqueio — confirmado que os únicos dois endpoints com esse dado (Achado 4) continuam vazios/bloqueados. Achado com valor: o bloqueio é específico do vínculo venda↔item, não geral — catálogo de preço/estoque/classificação de item funciona normalmente com a mesma conta, o que sugere uma permissão pontual no Moveres, não uma reconfiguração ampla | Dex (@dev) |
+| 2026-09-02 | 2.0 | **Achado 8, RETRATA o Achado 4.** Usuário trouxe informação de outro projeto usando `/api/NotasFiscaisEmitidas` com sucesso — motivou reteste. Causa raiz: bug de casing no spike original (`produtos`/`parcelas` minúsculos verificados, mas a resposta real usa `Produtos`/`Parcelas` maiúsculos — mesma classe de erro do Achado 3, não aplicada consistentemente). Reteste confirma: 100% das notas (100/100, janela Jul-Ago) com `Produtos` preenchido, 92% com `Parcelas`. Não era bloqueio de permissão — a conta nunca precisou de ajuste. Story 1.4 liberada para implementação; resumo executivo e recomendação reescritos | Dex (@dev) |
