@@ -15,6 +15,7 @@ const REPORTS: readonly { href: string; label: string }[] = [
   { href: '/relatorios/ranking-clientes', label: 'Ranking de Clientes' },
   { href: '/relatorios/tipo-preco-loja-item', label: 'Tipo de Preço × Loja × Item' },
   { href: '/relatorios/desempenho-atendente', label: 'Desempenho por Atendente' },
+  { href: '/relatorios/vendas-por-faixa-prazo-medio', label: 'Vendas por Faixa de Prazo Médio' },
 ];
 
 const linkClass = (active: boolean) =>
