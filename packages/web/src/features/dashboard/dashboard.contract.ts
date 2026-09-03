@@ -36,3 +36,27 @@ export interface DashboardKpisContract {
    */
   getKpis(period?: ReportFilter): Promise<DashboardKpis>;
 }
+
+/** Uma barra de um gráfico de resumo por dimensão. */
+export type DimensaoResumoRow = { chave: string; faturamento: number };
+
+/**
+ * Faturamento por Loja/Linha/Família/Grupo/Marca/Tipo de Preço — os mesmos
+ * seis indicadores disponíveis como filtro em Vendas por Item (Story 2.2),
+ * agora como gráfico no Painel, a pedido direto do usuário: "preciso que
+ * tenham gráficos para análise dos mesmos indicadores que estão nos
+ * filtros". Cada lista já vem limitada às maiores (Top 8) — Grupo sozinho
+ * tem ~80 valores distintos no dado real, inviável num gráfico de barras.
+ */
+export type PainelResumosPorDimensao = {
+  loja: DimensaoResumoRow[];
+  linha: DimensaoResumoRow[];
+  familia: DimensaoResumoRow[];
+  grupo: DimensaoResumoRow[];
+  marca: DimensaoResumoRow[];
+  tipoPreco: DimensaoResumoRow[];
+};
+
+export interface DashboardResumosContract {
+  getResumosPorDimensao(period?: ReportFilter): Promise<PainelResumosPorDimensao>;
+}
