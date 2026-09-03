@@ -29,40 +29,60 @@ export default async function VendasPorItemPage({
   ]);
 
   return (
-    <main className="flex-1 space-y-6 bg-zinc-50 p-6 dark:bg-zinc-950">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Vendas por Item
-        </h1>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Quantidade vendida agrupada por Família, Grupo e Item.
-        </p>
-      </header>
+    <main className="flex-1 gap-6 bg-zinc-50 p-6 dark:bg-zinc-950 lg:flex lg:items-start">
+      {/*
+        Barra lateral de classificação (Loja/Linha/Família/Grupo/Marca/Tipo de
+        Preço), a pedido direto do usuário — separada do filtro de período,
+        que fica no topo do conteúdo principal. `ReportFilterForm` gerencia
+        cada instância só os parâmetros de URL que ela mesma expõe, então as
+        duas convivem sem se apagar (ver o componente).
+      */}
+      <aside className="mb-6 shrink-0 lg:sticky lg:top-6 lg:mb-0 lg:w-64">
+        <h2 className="mb-2 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+          Filtrar por classificação
+        </h2>
+        <ReportFilterForm
+          showPeriod={false}
+          layout="vertical"
+          extraFilters={[
+            { key: 'loja', label: 'Loja', options: opcoes.lojas },
+            { key: 'linha', label: 'Linha', options: opcoes.linhas },
+            { key: 'familia', label: 'Família', options: opcoes.familias },
+            { key: 'grupo', label: 'Grupo', options: opcoes.grupos },
+            { key: 'marca', label: 'Marca', options: opcoes.marcas },
+            { key: 'tipoPreco', label: 'Tipo de Preço', options: opcoes.tiposPreco },
+          ]}
+        />
+      </aside>
 
-      <ReportFilterForm
-        extraFilters={[
-          { key: 'loja', label: 'Loja', options: opcoes.lojas },
-          { key: 'linha', label: 'Linha', options: opcoes.linhas },
-          { key: 'familia', label: 'Família', options: opcoes.familias },
-          { key: 'grupo', label: 'Grupo', options: opcoes.grupos },
-          { key: 'marca', label: 'Marca', options: opcoes.marcas },
-          { key: 'tipoPreco', label: 'Tipo de Preço', options: opcoes.tiposPreco },
-        ]}
-      />
+      <div className="min-w-0 flex-1 space-y-6">
+        <header>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Vendas por Item
+          </h1>
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            Quantidade vendida agrupada por Família, Grupo e Item.
+          </p>
+        </header>
 
-      {!valid && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-300">
-          Período inválido — exibindo todos os lançamentos.
-        </p>
-      )}
+        <ReportFilterForm />
 
-      <VendasPorItemResumoTable titulo="Resumo por Loja" colunaChave="Loja" rows={resumoPorLoja} />
-      <VendasPorItemResumoTable titulo="Resumo por Grupo" colunaChave="Grupo" rows={resumoPorGrupo} />
+        {!valid && (
+          <p role="alert" className="text-sm text-red-700 dark:text-red-300">
+            Período inválido — exibindo todos os lançamentos.
+          </p>
+        )}
 
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Detalhe completo</h2>
-        <VendasPorItemTable rows={rows} />
-      </section>
+        <VendasPorItemResumoTable titulo="Resumo por Loja" colunaChave="Loja" rows={resumoPorLoja} />
+        <VendasPorItemResumoTable titulo="Resumo por Grupo" colunaChave="Grupo" rows={resumoPorGrupo} />
+
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+            Detalhe completo
+          </h2>
+          <VendasPorItemTable rows={rows} />
+        </section>
+      </div>
     </main>
   );
 }
