@@ -26,10 +26,11 @@ const linkClass = (active: boolean) =>
   }`;
 
 /**
- * Navegação do Painel e dos 8 relatórios (Epic 2/3), num único menu — antes
- * cada rota só era acessível digitando a URL de cabeça. "Painel" fica direto
- * no cabeçalho; os relatórios ficam agrupados no menu "Relatórios" (são 7,
- * não cabem lado a lado sem quebrar o cabeçalho em telas menores).
+ * Navegação da Análise de Vendas e dos 8 relatórios (Epic 2/3), num único
+ * menu — antes cada rota só era acessível digitando a URL de cabeça.
+ * "Análise de Vendas" fica direto no cabeçalho; os relatórios ficam
+ * agrupados no menu "Relatórios" (são 7, não cabem lado a lado sem quebrar
+ * o cabeçalho em telas menores).
  */
 export function AppNav() {
   const pathname = usePathname();
@@ -62,7 +63,7 @@ export function AppNav() {
   return (
     <nav className="flex items-center gap-1">
       <Link href="/dashboard" className={linkClass(isDashboard)}>
-        Painel
+        Análise de Vendas
       </Link>
 
       <div ref={menuRef} className="relative">

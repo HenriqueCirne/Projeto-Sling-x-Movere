@@ -9,13 +9,15 @@ import { parseReportFilterSearchParams } from '@/shared/report-filters/parse-sea
 import { ReportFilterForm } from '@/shared/components/ReportFilterForm';
 
 export const metadata: Metadata = {
-  title: 'Painel — Movimento Gerais',
+  title: 'Análise de Vendas — Movimento Gerais',
 };
 
 export const dynamic = 'force-dynamic';
 
 /**
- * Painel — KPIs de resumo (Story 1.5, AC1/AC2).
+ * Análise de Vendas (nome exibido; rota e código internos continuam
+ * "dashboard" por não terem sido pedidos para mudar) — KPIs de resumo
+ * (Story 1.5, AC1/AC2).
  *
  * A autenticação (AC3) já está garantida por `app/(protected)/layout.tsx`,
  * que envolve esta página — não há checagem de sessão aqui de propósito,
@@ -45,7 +47,7 @@ export default async function DashboardPage({
     <main className="flex-1 space-y-6 bg-zinc-50 p-6 dark:bg-zinc-950">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Painel
+          Análise de Vendas
         </h1>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
           Resumo do desempenho comercial.
