@@ -15,31 +15,37 @@ function createRepository(porItem: RawGroup[], porItemELoja: RawGroupWithLoja[] 
 }
 
 describe('VendasPorItemService.getPorItem', () => {
-  it('repassa os grupos já ordenados pelo repositório', async () => {
+  it('repassa os grupos já ordenados pelo repositório, com quantidade e faturamento', async () => {
     const repository = createRepository([
-      { familia: 'Pneus', grupo: 'Aro 15', item: 'Item A', quantidade: 100 },
-      { familia: 'Pneus', grupo: 'Aro 17', item: 'Item B', quantidade: 50 },
+      { familia: 'Pneus', grupo: 'Aro 15', item: 'Item A', quantidade: 100, faturamento: 5000 },
+      { familia: 'Pneus', grupo: 'Aro 17', item: 'Item B', quantidade: 50, faturamento: 8000 },
     ]);
     const service = new VendasPorItemService(repository);
 
     const result = await service.getPorItem();
 
     expect(result).toEqual([
-      { familia: 'Pneus', grupo: 'Aro 15', item: 'Item A', quantidade: 100 },
-      { familia: 'Pneus', grupo: 'Aro 17', item: 'Item B', quantidade: 50 },
+      { familia: 'Pneus', grupo: 'Aro 15', item: 'Item A', quantidade: 100, faturamento: 5000 },
+      { familia: 'Pneus', grupo: 'Aro 17', item: 'Item B', quantidade: 50, faturamento: 8000 },
     ]);
   });
 
   it('substitui campos nulos por "Não informado" em vez de descartar a linha', async () => {
     const repository = createRepository([
-      { familia: null, grupo: null, item: null, quantidade: 10 },
+      { familia: null, grupo: null, item: null, quantidade: 10, faturamento: 100 },
     ]);
     const service = new VendasPorItemService(repository);
 
     const result = await service.getPorItem();
 
     expect(result).toEqual([
-      { familia: 'Não informado', grupo: 'Não informado', item: 'Não informado', quantidade: 10 },
+      {
+        familia: 'Não informado',
+        grupo: 'Não informado',
+        item: 'Não informado',
+        quantidade: 10,
+        faturamento: 100,
+      },
     ]);
   });
 
@@ -55,10 +61,20 @@ describe('VendasPorItemService.getPorItem', () => {
 });
 
 describe('VendasPorItemService.getPorItemPorLoja', () => {
-  it('inclui a dimensão loja e trata nulos', async () => {
-    const repository = createRepository([], [
-      { loja: null, familia: 'Pneus', grupo: 'Aro 15', item: 'Item A', quantidade: 20 },
-    ]);
+  it('inclui a dimensão loja, faturamento e trata nulos', async () => {
+    const repository = createRepository(
+      [],
+      [
+        {
+          loja: null,
+          familia: 'Pneus',
+          grupo: 'Aro 15',
+          item: 'Item A',
+          quantidade: 20,
+          faturamento: 1000,
+        },
+      ],
+    );
     const service = new VendasPorItemService(repository);
 
     const result = await service.getPorItemPorLoja();
@@ -70,6 +86,7 @@ describe('VendasPorItemService.getPorItemPorLoja', () => {
         grupo: 'Aro 15',
         item: 'Item A',
         quantidade: 20,
+        faturamento: 1000,
       },
     ]);
   });

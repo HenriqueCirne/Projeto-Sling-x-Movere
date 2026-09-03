@@ -1,3 +1,5 @@
+import { formatCurrency } from '@/features/dashboard/format';
+
 import type { VendasPorItemPorLojaRow, VendasPorItemRow } from '../vendas-por-item.contract';
 
 type VendasPorItemTableProps = {
@@ -34,6 +36,7 @@ export function VendasPorItemTable({ rows }: VendasPorItemTableProps) {
             <th className="px-4 py-3 font-medium">Grupo</th>
             <th className="px-4 py-3 font-medium">Item</th>
             <th className="px-4 py-3 text-right font-medium">Quantidade</th>
+            <th className="px-4 py-3 text-right font-medium">Faturamento</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -49,6 +52,9 @@ export function VendasPorItemTable({ rows }: VendasPorItemTableProps) {
               <td className="px-4 py-2 text-zinc-700 dark:text-zinc-300">{row.item}</td>
               <td className="px-4 py-2 text-right tabular-nums text-zinc-900 dark:text-zinc-50">
                 {row.quantidade.toLocaleString('pt-BR')}
+              </td>
+              <td className="px-4 py-2 text-right tabular-nums text-zinc-900 dark:text-zinc-50">
+                {formatCurrency(row.faturamento)}
               </td>
             </tr>
           ))}

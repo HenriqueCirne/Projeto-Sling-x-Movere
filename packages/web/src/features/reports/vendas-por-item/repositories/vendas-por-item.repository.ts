@@ -9,6 +9,7 @@ export type RawGroup = {
   grupo: string | null;
   item: string | null;
   quantidade: number;
+  faturamento: number;
 };
 
 export type RawGroupWithLoja = RawGroup & { loja: string | null };
@@ -27,7 +28,7 @@ export class PrismaVendasPorItemRepository implements VendasPorItemRepository {
     const groups = await prisma.salesEntry.groupBy({
       by: ['familia', 'grupo', 'item'],
       where: buildSalesEntryWhere(filter),
-      _sum: { quantidade: true },
+      _sum: { quantidade: true, valorTotal: true },
       orderBy: { _sum: { quantidade: 'desc' } },
     });
 
@@ -36,6 +37,7 @@ export class PrismaVendasPorItemRepository implements VendasPorItemRepository {
       grupo: g.grupo,
       item: g.item,
       quantidade: g._sum.quantidade?.toNumber() ?? 0,
+      faturamento: g._sum.valorTotal?.toNumber() ?? 0,
     }));
   }
 
@@ -45,7 +47,7 @@ export class PrismaVendasPorItemRepository implements VendasPorItemRepository {
     const groups = await prisma.salesEntry.groupBy({
       by: ['loja', 'familia', 'grupo', 'item'],
       where: buildSalesEntryWhere(filter),
-      _sum: { quantidade: true },
+      _sum: { quantidade: true, valorTotal: true },
       orderBy: { _sum: { quantidade: 'desc' } },
     });
 
@@ -55,6 +57,7 @@ export class PrismaVendasPorItemRepository implements VendasPorItemRepository {
       grupo: g.grupo,
       item: g.item,
       quantidade: g._sum.quantidade?.toNumber() ?? 0,
+      faturamento: g._sum.valorTotal?.toNumber() ?? 0,
     }));
   }
 }

@@ -24,6 +24,7 @@ export class VendasPorItemService implements VendasPorItemContract {
       grupo: labelOrNaoInformado(g.grupo),
       item: labelOrNaoInformado(g.item),
       quantidade: g.quantidade,
+      faturamento: g.faturamento,
     }));
   }
 
@@ -36,6 +37,7 @@ export class VendasPorItemService implements VendasPorItemContract {
       grupo: labelOrNaoInformado(g.grupo),
       item: labelOrNaoInformado(g.item),
       quantidade: g.quantidade,
+      faturamento: g.faturamento,
     }));
   }
 }
