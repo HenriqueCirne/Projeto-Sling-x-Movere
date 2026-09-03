@@ -10,6 +10,7 @@ import type {
 import { VendasPorItemService } from './vendas-por-item.service';
 
 const OPCOES_VAZIAS: OpcoesDeFiltro = {
+  lojas: [],
   marcas: [],
   grupos: [],
   familias: [],
@@ -196,6 +197,7 @@ describe('VendasPorItemService.getResumoPorLoja', () => {
 describe('VendasPorItemService.getOpcoesDeFiltro', () => {
   it('repassa as opções do repositório sem transformação', async () => {
     const opcoes: OpcoesDeFiltro = {
+      lojas: ['01 - MT', '02 - PO'],
       marcas: ['Marca X', 'Marca Y'],
       grupos: ['Aro 15'],
       familias: ['Pneus'],

@@ -41,6 +41,7 @@ export default async function VendasPorItemPage({
 
       <ReportFilterForm
         extraFilters={[
+          { key: 'loja', label: 'Loja', options: opcoes.lojas },
           { key: 'linha', label: 'Linha', options: opcoes.linhas },
           { key: 'familia', label: 'Família', options: opcoes.familias },
           { key: 'grupo', label: 'Grupo', options: opcoes.grupos },

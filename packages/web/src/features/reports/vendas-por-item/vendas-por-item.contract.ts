@@ -35,6 +35,7 @@ export type VendasPorItemResumoRow = {
 
 /** Valores distintos existentes no dado, para popular os seletores do filtro. */
 export type VendasPorItemOpcoesDeFiltro = {
+  lojas: string[];
   marcas: string[];
   grupos: string[];
   familias: string[];

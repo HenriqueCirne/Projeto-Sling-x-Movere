@@ -22,6 +22,7 @@ export type RawResumo = { chave: string | null; quantidade: number; faturamento:
 
 /** Valores distintos existentes no dado, para popular os seletores do filtro. */
 export type OpcoesDeFiltro = {
+  lojas: string[];
   marcas: string[];
   grupos: string[];
   familias: string[];
@@ -123,7 +124,8 @@ export class PrismaVendasPorItemRepository implements VendasPorItemRepository {
   async findOpcoesDeFiltro(): Promise<OpcoesDeFiltro> {
     const prisma = this.resolveClient();
 
-    const [marcas, grupos, familias, linhas, tiposPreco] = await Promise.all([
+    const [lojas, marcas, grupos, familias, linhas, tiposPreco] = await Promise.all([
+      prisma.salesEntry.groupBy({ by: ['loja'], where: { loja: { not: null } } }),
       prisma.salesEntry.groupBy({ by: ['marca'], where: { marca: { not: null } } }),
       prisma.salesEntry.groupBy({ by: ['grupo'], where: { grupo: { not: null } } }),
       prisma.salesEntry.groupBy({ by: ['familia'], where: { familia: { not: null } } }),
@@ -135,6 +137,7 @@ export class PrismaVendasPorItemRepository implements VendasPorItemRepository {
       values.filter((v): v is string => v !== null).sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
     return {
+      lojas: toSortedList(lojas.map((g) => g.loja)),
       marcas: toSortedList(marcas.map((g) => g.marca)),
       grupos: toSortedList(grupos.map((g) => g.grupo)),
       familias: toSortedList(familias.map((g) => g.familia)),
