@@ -17,9 +17,14 @@ export type RawGroup = {
 
 export type RawGroupWithLoja = RawGroup & { loja: string | null };
 
+/** Uma linha de resumo (Grupo ou Loja), sem o detalhe de Item/Marca/Tipo de Preço. */
+export type RawResumo = { chave: string | null; quantidade: number; faturamento: number };
+
 export interface VendasPorItemRepository {
   findAgrupadoPorItem(filter: ReportFilter): Promise<RawGroup[]>;
   findAgrupadoPorItemELoja(filter: ReportFilter): Promise<RawGroupWithLoja[]>;
+  findResumoPorGrupo(filter: ReportFilter): Promise<RawResumo[]>;
+  findResumoPorLoja(filter: ReportFilter): Promise<RawResumo[]>;
 }
 
 export class PrismaVendasPorItemRepository implements VendasPorItemRepository {
@@ -65,6 +70,40 @@ export class PrismaVendasPorItemRepository implements VendasPorItemRepository {
       marca: g.marca,
       item: g.item,
       tipoPreco: g.tipoPreco,
+      quantidade: g._sum.quantidade?.toNumber() ?? 0,
+      faturamento: g._sum.valorTotal?.toNumber() ?? 0,
+    }));
+  }
+
+  async findResumoPorGrupo(filter: ReportFilter): Promise<RawResumo[]> {
+    const prisma = this.resolveClient();
+
+    const groups = await prisma.salesEntry.groupBy({
+      by: ['grupo'],
+      where: buildSalesEntryWhere(filter),
+      _sum: { quantidade: true, valorTotal: true },
+      orderBy: { _sum: { valorTotal: 'desc' } },
+    });
+
+    return groups.map((g) => ({
+      chave: g.grupo,
+      quantidade: g._sum.quantidade?.toNumber() ?? 0,
+      faturamento: g._sum.valorTotal?.toNumber() ?? 0,
+    }));
+  }
+
+  async findResumoPorLoja(filter: ReportFilter): Promise<RawResumo[]> {
+    const prisma = this.resolveClient();
+
+    const groups = await prisma.salesEntry.groupBy({
+      by: ['loja'],
+      where: buildSalesEntryWhere(filter),
+      _sum: { quantidade: true, valorTotal: true },
+      orderBy: { _sum: { valorTotal: 'desc' } },
+    });
+
+    return groups.map((g) => ({
+      chave: g.loja,
       quantidade: g._sum.quantidade?.toNumber() ?? 0,
       faturamento: g._sum.valorTotal?.toNumber() ?? 0,
     }));

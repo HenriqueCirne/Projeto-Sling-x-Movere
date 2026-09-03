@@ -3,14 +3,22 @@ import { describe, expect, it, vi } from 'vitest';
 import type {
   RawGroup,
   RawGroupWithLoja,
+  RawResumo,
   VendasPorItemRepository,
 } from '../repositories/vendas-por-item.repository';
 import { VendasPorItemService } from './vendas-por-item.service';
 
-function createRepository(porItem: RawGroup[], porItemELoja: RawGroupWithLoja[] = []) {
+function createRepository(
+  porItem: RawGroup[],
+  porItemELoja: RawGroupWithLoja[] = [],
+  resumoPorGrupo: RawResumo[] = [],
+  resumoPorLoja: RawResumo[] = [],
+) {
   return {
     findAgrupadoPorItem: vi.fn(async () => porItem),
     findAgrupadoPorItemELoja: vi.fn(async () => porItemELoja),
+    findResumoPorGrupo: vi.fn(async () => resumoPorGrupo),
+    findResumoPorLoja: vi.fn(async () => resumoPorLoja),
   } satisfies VendasPorItemRepository;
 }
 
@@ -121,5 +129,55 @@ describe('VendasPorItemService.getPorItemPorLoja', () => {
         faturamento: 1000,
       },
     ]);
+  });
+});
+
+describe('VendasPorItemService.getResumoPorGrupo', () => {
+  it('repassa o resumo já ordenado pelo repositório e trata nulos', async () => {
+    const repository = createRepository([], [], [
+      { chave: 'Aro 15', quantidade: 300, faturamento: 15000 },
+      { chave: null, quantidade: 10, faturamento: 100 },
+    ]);
+    const service = new VendasPorItemService(repository);
+
+    const result = await service.getResumoPorGrupo();
+
+    expect(result).toEqual([
+      { chave: 'Aro 15', quantidade: 300, faturamento: 15000 },
+      { chave: 'Não informado', quantidade: 10, faturamento: 100 },
+    ]);
+  });
+
+  it('repassa o filtro ao repositório', async () => {
+    const repository = createRepository([]);
+    const service = new VendasPorItemService(repository);
+    const filter = { loja: '01 - MT' };
+
+    await service.getResumoPorGrupo(filter);
+
+    expect(repository.findResumoPorGrupo).toHaveBeenCalledWith(filter);
+  });
+});
+
+describe('VendasPorItemService.getResumoPorLoja', () => {
+  it('repassa o resumo já ordenado pelo repositório e trata nulos', async () => {
+    const repository = createRepository([], [], [], [
+      { chave: '01 - MT', quantidade: 500, faturamento: 30000 },
+    ]);
+    const service = new VendasPorItemService(repository);
+
+    const result = await service.getResumoPorLoja();
+
+    expect(result).toEqual([{ chave: '01 - MT', quantidade: 500, faturamento: 30000 }]);
+  });
+
+  it('repassa o filtro ao repositório', async () => {
+    const repository = createRepository([]);
+    const service = new VendasPorItemService(repository);
+    const filter = { dataInicial: new Date('2026-07-01') };
+
+    await service.getResumoPorLoja(filter);
+
+    expect(repository.findResumoPorLoja).toHaveBeenCalledWith(filter);
   });
 });

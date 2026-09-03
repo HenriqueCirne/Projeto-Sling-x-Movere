@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import { vendasPorItemService } from '@/features/reports/vendas-por-item';
+import { VendasPorItemResumoTable } from '@/features/reports/vendas-por-item/components/VendasPorItemResumoTable';
 import { VendasPorItemTable } from '@/features/reports/vendas-por-item/components/VendasPorItemTable';
 import { ReportFilterForm } from '@/shared/components/ReportFilterForm';
 import { parseReportFilterSearchParams } from '@/shared/report-filters/parse-search-params';
@@ -20,7 +21,11 @@ export default async function VendasPorItemPage({
   const params = await searchParams;
   const { filter, valid } = parseReportFilterSearchParams(params);
 
-  const rows = await vendasPorItemService.getPorItem(filter);
+  const [rows, resumoPorLoja, resumoPorGrupo] = await Promise.all([
+    vendasPorItemService.getPorItem(filter),
+    vendasPorItemService.getResumoPorLoja(filter),
+    vendasPorItemService.getResumoPorGrupo(filter),
+  ]);
 
   return (
     <main className="flex-1 space-y-6 bg-zinc-50 p-6 dark:bg-zinc-950">
@@ -41,7 +46,13 @@ export default async function VendasPorItemPage({
         </p>
       )}
 
-      <VendasPorItemTable rows={rows} />
+      <VendasPorItemResumoTable titulo="Resumo por Loja" colunaChave="Loja" rows={resumoPorLoja} />
+      <VendasPorItemResumoTable titulo="Resumo por Grupo" colunaChave="Grupo" rows={resumoPorGrupo} />
+
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Detalhe completo</h2>
+        <VendasPorItemTable rows={rows} />
+      </section>
     </main>
   );
 }

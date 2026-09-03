@@ -4,6 +4,7 @@ import { labelOrNaoInformado } from '@/shared/reports/labels';
 import type {
   VendasPorItemContract,
   VendasPorItemPorLojaRow,
+  VendasPorItemResumoRow,
   VendasPorItemRow,
 } from '../vendas-por-item.contract';
 import {
@@ -42,6 +43,26 @@ export class VendasPorItemService implements VendasPorItemContract {
       marca: labelOrNaoInformado(g.marca),
       item: labelOrNaoInformado(g.item),
       tipoPreco: labelOrNaoInformado(g.tipoPreco),
+      quantidade: g.quantidade,
+      faturamento: g.faturamento,
+    }));
+  }
+
+  async getResumoPorGrupo(filter: ReportFilter = {}): Promise<VendasPorItemResumoRow[]> {
+    const groups = await this.repository.findResumoPorGrupo(filter);
+
+    return groups.map((g) => ({
+      chave: labelOrNaoInformado(g.chave),
+      quantidade: g.quantidade,
+      faturamento: g.faturamento,
+    }));
+  }
+
+  async getResumoPorLoja(filter: ReportFilter = {}): Promise<VendasPorItemResumoRow[]> {
+    const groups = await this.repository.findResumoPorLoja(filter);
+
+    return groups.map((g) => ({
+      chave: labelOrNaoInformado(g.chave),
       quantidade: g.quantidade,
       faturamento: g.faturamento,
     }));
