@@ -14,25 +14,25 @@ function createRepository(porItem: RawGroup[], porItemELoja: RawGroupWithLoja[] 
   } satisfies VendasPorItemRepository;
 }
 
+function rawGroup(overrides: Partial<RawGroup> = {}): RawGroup {
+  return {
+    linha: 'Linha X',
+    familia: 'Pneus',
+    grupo: 'Aro 15',
+    marca: 'Marca X',
+    item: 'Item A',
+    tipoPreco: 'VAREJO',
+    quantidade: 100,
+    faturamento: 5000,
+    ...overrides,
+  };
+}
+
 describe('VendasPorItemService.getPorItem', () => {
-  it('repassa os grupos já ordenados pelo repositório, com quantidade e faturamento', async () => {
+  it('repassa os grupos já ordenados pelo repositório, com todas as dimensões e faturamento', async () => {
     const repository = createRepository([
-      { familia: 'Pneus', grupo: 'Aro 15', item: 'Item A', quantidade: 100, faturamento: 5000 },
-      { familia: 'Pneus', grupo: 'Aro 17', item: 'Item B', quantidade: 50, faturamento: 8000 },
-    ]);
-    const service = new VendasPorItemService(repository);
-
-    const result = await service.getPorItem();
-
-    expect(result).toEqual([
-      { familia: 'Pneus', grupo: 'Aro 15', item: 'Item A', quantidade: 100, faturamento: 5000 },
-      { familia: 'Pneus', grupo: 'Aro 17', item: 'Item B', quantidade: 50, faturamento: 8000 },
-    ]);
-  });
-
-  it('substitui campos nulos por "Não informado" em vez de descartar a linha', async () => {
-    const repository = createRepository([
-      { familia: null, grupo: null, item: null, quantidade: 10, faturamento: 100 },
+      rawGroup(),
+      rawGroup({ item: 'Item B', quantidade: 50, faturamento: 8000 }),
     ]);
     const service = new VendasPorItemService(repository);
 
@@ -40,13 +40,51 @@ describe('VendasPorItemService.getPorItem', () => {
 
     expect(result).toEqual([
       {
-        familia: 'Não informado',
-        grupo: 'Não informado',
-        item: 'Não informado',
-        quantidade: 10,
-        faturamento: 100,
+        linha: 'Linha X',
+        familia: 'Pneus',
+        grupo: 'Aro 15',
+        marca: 'Marca X',
+        item: 'Item A',
+        tipoPreco: 'VAREJO',
+        quantidade: 100,
+        faturamento: 5000,
+      },
+      {
+        linha: 'Linha X',
+        familia: 'Pneus',
+        grupo: 'Aro 15',
+        marca: 'Marca X',
+        item: 'Item B',
+        tipoPreco: 'VAREJO',
+        quantidade: 50,
+        faturamento: 8000,
       },
     ]);
+  });
+
+  it('substitui campos nulos por "Não informado" em vez de descartar a linha', async () => {
+    const repository = createRepository([
+      rawGroup({
+        linha: null,
+        familia: null,
+        grupo: null,
+        marca: null,
+        item: null,
+        tipoPreco: null,
+      }),
+    ]);
+    const service = new VendasPorItemService(repository);
+
+    const result = await service.getPorItem();
+
+    expect(result[0]).toMatchObject({
+      linha: 'Não informado',
+      familia: 'Não informado',
+      grupo: 'Não informado',
+      marca: 'Não informado',
+      item: 'Não informado',
+      tipoPreco: 'Não informado',
+    });
   });
 
   it('repassa o filtro ao repositório', async () => {
@@ -64,16 +102,7 @@ describe('VendasPorItemService.getPorItemPorLoja', () => {
   it('inclui a dimensão loja, faturamento e trata nulos', async () => {
     const repository = createRepository(
       [],
-      [
-        {
-          loja: null,
-          familia: 'Pneus',
-          grupo: 'Aro 15',
-          item: 'Item A',
-          quantidade: 20,
-          faturamento: 1000,
-        },
-      ],
+      [{ loja: null, ...rawGroup({ quantidade: 20, faturamento: 1000 }) }],
     );
     const service = new VendasPorItemService(repository);
 
@@ -82,9 +111,12 @@ describe('VendasPorItemService.getPorItemPorLoja', () => {
     expect(result).toEqual([
       {
         loja: 'Não informado',
+        linha: 'Linha X',
         familia: 'Pneus',
         grupo: 'Aro 15',
+        marca: 'Marca X',
         item: 'Item A',
+        tipoPreco: 'VAREJO',
         quantidade: 20,
         faturamento: 1000,
       },

@@ -5,9 +5,12 @@ import type { ReportFilter } from '@/shared/report-filters/report-filter.contrac
 import { buildSalesEntryWhere } from '@/shared/report-filters/sales-entry-where';
 
 export type RawGroup = {
+  linha: string | null;
   familia: string | null;
   grupo: string | null;
+  marca: string | null;
   item: string | null;
+  tipoPreco: string | null;
   quantidade: number;
   faturamento: number;
 };
@@ -26,16 +29,19 @@ export class PrismaVendasPorItemRepository implements VendasPorItemRepository {
     const prisma = this.resolveClient();
 
     const groups = await prisma.salesEntry.groupBy({
-      by: ['familia', 'grupo', 'item'],
+      by: ['linha', 'familia', 'grupo', 'marca', 'item', 'tipoPreco'],
       where: buildSalesEntryWhere(filter),
       _sum: { quantidade: true, valorTotal: true },
       orderBy: { _sum: { quantidade: 'desc' } },
     });
 
     return groups.map((g) => ({
+      linha: g.linha,
       familia: g.familia,
       grupo: g.grupo,
+      marca: g.marca,
       item: g.item,
+      tipoPreco: g.tipoPreco,
       quantidade: g._sum.quantidade?.toNumber() ?? 0,
       faturamento: g._sum.valorTotal?.toNumber() ?? 0,
     }));
@@ -45,7 +51,7 @@ export class PrismaVendasPorItemRepository implements VendasPorItemRepository {
     const prisma = this.resolveClient();
 
     const groups = await prisma.salesEntry.groupBy({
-      by: ['loja', 'familia', 'grupo', 'item'],
+      by: ['loja', 'linha', 'familia', 'grupo', 'marca', 'item', 'tipoPreco'],
       where: buildSalesEntryWhere(filter),
       _sum: { quantidade: true, valorTotal: true },
       orderBy: { _sum: { quantidade: 'desc' } },
@@ -53,9 +59,12 @@ export class PrismaVendasPorItemRepository implements VendasPorItemRepository {
 
     return groups.map((g) => ({
       loja: g.loja,
+      linha: g.linha,
       familia: g.familia,
       grupo: g.grupo,
+      marca: g.marca,
       item: g.item,
+      tipoPreco: g.tipoPreco,
       quantidade: g._sum.quantidade?.toNumber() ?? 0,
       faturamento: g._sum.valorTotal?.toNumber() ?? 0,
     }));

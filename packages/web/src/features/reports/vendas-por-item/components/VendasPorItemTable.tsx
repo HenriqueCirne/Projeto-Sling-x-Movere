@@ -32,9 +32,12 @@ export function VendasPorItemTable({ rows }: VendasPorItemTableProps) {
         <thead className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
           <tr>
             {showLoja && <th className="px-4 py-3 font-medium">Loja</th>}
+            <th className="px-4 py-3 font-medium">Linha</th>
             <th className="px-4 py-3 font-medium">Família</th>
             <th className="px-4 py-3 font-medium">Grupo</th>
+            <th className="px-4 py-3 font-medium">Marca</th>
             <th className="px-4 py-3 font-medium">Item</th>
+            <th className="px-4 py-3 font-medium">Tipo de Preço</th>
             <th className="px-4 py-3 text-right font-medium">Quantidade</th>
             <th className="px-4 py-3 text-right font-medium">Faturamento</th>
           </tr>
@@ -47,9 +50,12 @@ export function VendasPorItemTable({ rows }: VendasPorItemTableProps) {
               {showLoja && 'loja' in row && (
                 <td className="px-4 py-2 text-zinc-700 dark:text-zinc-300">{row.loja}</td>
               )}
+              <td className="px-4 py-2 text-zinc-700 dark:text-zinc-300">{row.linha}</td>
               <td className="px-4 py-2 text-zinc-700 dark:text-zinc-300">{row.familia}</td>
               <td className="px-4 py-2 text-zinc-700 dark:text-zinc-300">{row.grupo}</td>
+              <td className="px-4 py-2 text-zinc-700 dark:text-zinc-300">{row.marca}</td>
               <td className="px-4 py-2 text-zinc-700 dark:text-zinc-300">{row.item}</td>
+              <td className="px-4 py-2 text-zinc-700 dark:text-zinc-300">{row.tipoPreco}</td>
               <td className="px-4 py-2 text-right tabular-nums text-zinc-900 dark:text-zinc-50">
                 {row.quantidade.toLocaleString('pt-BR')}
               </td>

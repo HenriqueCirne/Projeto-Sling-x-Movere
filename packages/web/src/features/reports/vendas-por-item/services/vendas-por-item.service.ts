@@ -20,9 +20,12 @@ export class VendasPorItemService implements VendasPorItemContract {
     const groups = await this.repository.findAgrupadoPorItem(filter);
 
     return groups.map((g) => ({
+      linha: labelOrNaoInformado(g.linha),
       familia: labelOrNaoInformado(g.familia),
       grupo: labelOrNaoInformado(g.grupo),
+      marca: labelOrNaoInformado(g.marca),
       item: labelOrNaoInformado(g.item),
+      tipoPreco: labelOrNaoInformado(g.tipoPreco),
       quantidade: g.quantidade,
       faturamento: g.faturamento,
     }));
@@ -33,9 +36,12 @@ export class VendasPorItemService implements VendasPorItemContract {
 
     return groups.map((g) => ({
       loja: labelOrNaoInformado(g.loja),
+      linha: labelOrNaoInformado(g.linha),
       familia: labelOrNaoInformado(g.familia),
       grupo: labelOrNaoInformado(g.grupo),
+      marca: labelOrNaoInformado(g.marca),
       item: labelOrNaoInformado(g.item),
+      tipoPreco: labelOrNaoInformado(g.tipoPreco),
       quantidade: g.quantidade,
       faturamento: g.faturamento,
     }));
