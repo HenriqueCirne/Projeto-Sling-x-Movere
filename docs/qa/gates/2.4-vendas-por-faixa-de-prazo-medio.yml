@@ -4,7 +4,7 @@ story_title: 'Vendas por Faixa de Prazo Médio'
 gate: CONCERNS
 status_reason: 'AC1 e AC2 implementadas e verificadas (13 testes novos + validação manual contra o banco real: as 7 faixas somam exatamente o faturamento total já validado, R$ 10.394.644,52). Um bug de fronteira real (buraco entre faixas para prazo médio fracionário) foi encontrado e corrigido durante o desenvolvimento, com teste de regressão. Nenhum problema bloqueante.'
 reviewer: 'Quinn (Test Architect)'
-reviewed_revision: 'ver Change Log da story — commit no momento do push'
+reviewed_revision: 'commit:84efa14'
 updated: '2026-09-03T00:00:00Z'
 
 top_issues:
