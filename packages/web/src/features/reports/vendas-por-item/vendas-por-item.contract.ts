@@ -33,6 +33,15 @@ export type VendasPorItemResumoRow = {
   faturamento: number;
 };
 
+/** Valores distintos existentes no dado, para popular os seletores do filtro. */
+export type VendasPorItemOpcoesDeFiltro = {
+  marcas: string[];
+  grupos: string[];
+  familias: string[];
+  linhas: string[];
+  tiposPreco: string[];
+};
+
 export interface VendasPorItemContract {
   /** Agrupado por Linha/Família/Grupo/Marca/Item/Tipo de Preço, ordenado por quantidade decrescente (AC3 da 2.2). */
   getPorItem(filter?: ReportFilter): Promise<VendasPorItemRow[]>;
@@ -42,4 +51,6 @@ export interface VendasPorItemContract {
   getResumoPorGrupo(filter?: ReportFilter): Promise<VendasPorItemResumoRow[]>;
   /** Resumo (sem detalhe de item) por Loja, ordenado por faturamento decrescente. */
   getResumoPorLoja(filter?: ReportFilter): Promise<VendasPorItemResumoRow[]>;
+  /** Opções para os seletores de Marca/Grupo/Família/Linha/Tipo de Preço. */
+  getOpcoesDeFiltro(): Promise<VendasPorItemOpcoesDeFiltro>;
 }

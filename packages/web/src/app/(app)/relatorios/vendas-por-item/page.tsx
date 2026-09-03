@@ -21,10 +21,11 @@ export default async function VendasPorItemPage({
   const params = await searchParams;
   const { filter, valid } = parseReportFilterSearchParams(params);
 
-  const [rows, resumoPorLoja, resumoPorGrupo] = await Promise.all([
+  const [rows, resumoPorLoja, resumoPorGrupo, opcoes] = await Promise.all([
     vendasPorItemService.getPorItem(filter),
     vendasPorItemService.getResumoPorLoja(filter),
     vendasPorItemService.getResumoPorGrupo(filter),
+    vendasPorItemService.getOpcoesDeFiltro(),
   ]);
 
   return (
@@ -38,7 +39,15 @@ export default async function VendasPorItemPage({
         </p>
       </header>
 
-      <ReportFilterForm />
+      <ReportFilterForm
+        extraFilters={[
+          { key: 'linha', label: 'Linha', options: opcoes.linhas },
+          { key: 'familia', label: 'Família', options: opcoes.familias },
+          { key: 'grupo', label: 'Grupo', options: opcoes.grupos },
+          { key: 'marca', label: 'Marca', options: opcoes.marcas },
+          { key: 'tipoPreco', label: 'Tipo de Preço', options: opcoes.tiposPreco },
+        ]}
+      />
 
       {!valid && (
         <p role="alert" className="text-sm text-red-700 dark:text-red-300">

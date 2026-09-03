@@ -40,4 +40,22 @@ describe('buildSalesEntryWhere', () => {
   it('inclui loja sozinha, sem filtro de período', () => {
     expect(buildSalesEntryWhere({ loja: '01 - MT' })).toEqual({ loja: '01 - MT' });
   });
+
+  it('inclui marca/grupo/familia/linha/tipoPreco quando informados', () => {
+    expect(
+      buildSalesEntryWhere({
+        marca: 'Marca X',
+        grupo: 'Grupo X',
+        familia: 'Familia X',
+        linha: 'Linha X',
+        tipoPreco: 'VAREJO',
+      }),
+    ).toEqual({
+      marca: 'Marca X',
+      grupo: 'Grupo X',
+      familia: 'Familia X',
+      linha: 'Linha X',
+      tipoPreco: 'VAREJO',
+    });
+  });
 });

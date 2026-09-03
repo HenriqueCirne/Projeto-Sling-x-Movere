@@ -12,6 +12,11 @@ export const reportFilterInputSchema = z
     dataInicial: z.iso.date().optional(),
     dataFinal: z.iso.date().optional(),
     loja: z.string().trim().min(1).optional(),
+    marca: z.string().trim().min(1).optional(),
+    grupo: z.string().trim().min(1).optional(),
+    familia: z.string().trim().min(1).optional(),
+    linha: z.string().trim().min(1).optional(),
+    tipoPreco: z.string().trim().min(1).optional(),
   })
   .refine(
     (value) => !value.dataInicial || !value.dataFinal || value.dataInicial <= value.dataFinal,
@@ -30,5 +35,10 @@ export function toReportFilter(input: ReportFilterInput): ReportFilter {
     dataInicial: input.dataInicial ? new Date(`${input.dataInicial}T00:00:00.000Z`) : undefined,
     dataFinal: input.dataFinal ? new Date(`${input.dataFinal}T23:59:59.999Z`) : undefined,
     loja: input.loja,
+    marca: input.marca,
+    grupo: input.grupo,
+    familia: input.familia,
+    linha: input.linha,
+    tipoPreco: input.tipoPreco,
   };
 }

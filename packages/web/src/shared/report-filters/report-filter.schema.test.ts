@@ -56,6 +56,27 @@ describe('toReportFilter', () => {
       dataInicial: undefined,
       dataFinal: undefined,
       loja: undefined,
+      marca: undefined,
+      grupo: undefined,
+      familia: undefined,
+      linha: undefined,
+      tipoPreco: undefined,
     });
+  });
+
+  it('repassa marca/grupo/familia/linha/tipoPreco', () => {
+    const filter = toReportFilter({
+      marca: 'Marca X',
+      grupo: 'Grupo X',
+      familia: 'Familia X',
+      linha: 'Linha X',
+      tipoPreco: 'VAREJO',
+    });
+
+    expect(filter.marca).toBe('Marca X');
+    expect(filter.grupo).toBe('Grupo X');
+    expect(filter.familia).toBe('Familia X');
+    expect(filter.linha).toBe('Linha X');
+    expect(filter.tipoPreco).toBe('VAREJO');
   });
 });

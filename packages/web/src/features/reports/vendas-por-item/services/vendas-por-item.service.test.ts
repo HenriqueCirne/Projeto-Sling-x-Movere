@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
+  OpcoesDeFiltro,
   RawGroup,
   RawGroupWithLoja,
   RawResumo,
@@ -8,17 +9,27 @@ import type {
 } from '../repositories/vendas-por-item.repository';
 import { VendasPorItemService } from './vendas-por-item.service';
 
+const OPCOES_VAZIAS: OpcoesDeFiltro = {
+  marcas: [],
+  grupos: [],
+  familias: [],
+  linhas: [],
+  tiposPreco: [],
+};
+
 function createRepository(
   porItem: RawGroup[],
   porItemELoja: RawGroupWithLoja[] = [],
   resumoPorGrupo: RawResumo[] = [],
   resumoPorLoja: RawResumo[] = [],
+  opcoesDeFiltro: OpcoesDeFiltro = OPCOES_VAZIAS,
 ) {
   return {
     findAgrupadoPorItem: vi.fn(async () => porItem),
     findAgrupadoPorItemELoja: vi.fn(async () => porItemELoja),
     findResumoPorGrupo: vi.fn(async () => resumoPorGrupo),
     findResumoPorLoja: vi.fn(async () => resumoPorLoja),
+    findOpcoesDeFiltro: vi.fn(async () => opcoesDeFiltro),
   } satisfies VendasPorItemRepository;
 }
 
@@ -179,5 +190,21 @@ describe('VendasPorItemService.getResumoPorLoja', () => {
     await service.getResumoPorLoja(filter);
 
     expect(repository.findResumoPorLoja).toHaveBeenCalledWith(filter);
+  });
+});
+
+describe('VendasPorItemService.getOpcoesDeFiltro', () => {
+  it('repassa as opções do repositório sem transformação', async () => {
+    const opcoes: OpcoesDeFiltro = {
+      marcas: ['Marca X', 'Marca Y'],
+      grupos: ['Aro 15'],
+      familias: ['Pneus'],
+      linhas: ['Linha X'],
+      tiposPreco: ['VAREJO', 'ATACADO'],
+    };
+    const repository = createRepository([], [], [], [], opcoes);
+    const service = new VendasPorItemService(repository);
+
+    expect(await service.getOpcoesDeFiltro()).toEqual(opcoes);
   });
 });

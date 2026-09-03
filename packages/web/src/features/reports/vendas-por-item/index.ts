@@ -1,6 +1,7 @@
 /** Fachada da feature `vendas-por-item` (server-only — arrasta Prisma). */
 export type {
   VendasPorItemContract,
+  VendasPorItemOpcoesDeFiltro,
   VendasPorItemPorLojaRow,
   VendasPorItemResumoRow,
   VendasPorItemRow,

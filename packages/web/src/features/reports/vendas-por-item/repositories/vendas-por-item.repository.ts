@@ -20,11 +20,22 @@ export type RawGroupWithLoja = RawGroup & { loja: string | null };
 /** Uma linha de resumo (Grupo ou Loja), sem o detalhe de Item/Marca/Tipo de Preço. */
 export type RawResumo = { chave: string | null; quantidade: number; faturamento: number };
 
+/** Valores distintos existentes no dado, para popular os seletores do filtro. */
+export type OpcoesDeFiltro = {
+  marcas: string[];
+  grupos: string[];
+  familias: string[];
+  linhas: string[];
+  tiposPreco: string[];
+};
+
 export interface VendasPorItemRepository {
   findAgrupadoPorItem(filter: ReportFilter): Promise<RawGroup[]>;
   findAgrupadoPorItemELoja(filter: ReportFilter): Promise<RawGroupWithLoja[]>;
   findResumoPorGrupo(filter: ReportFilter): Promise<RawResumo[]>;
   findResumoPorLoja(filter: ReportFilter): Promise<RawResumo[]>;
+  /** Não recebe `ReportFilter`: as opções são sempre todos os valores existentes na tabela, não só no período filtrado — evita um seletor que muda de opções a cada filtro aplicado. */
+  findOpcoesDeFiltro(): Promise<OpcoesDeFiltro>;
 }
 
 export class PrismaVendasPorItemRepository implements VendasPorItemRepository {
@@ -107,6 +118,29 @@ export class PrismaVendasPorItemRepository implements VendasPorItemRepository {
       quantidade: g._sum.quantidade?.toNumber() ?? 0,
       faturamento: g._sum.valorTotal?.toNumber() ?? 0,
     }));
+  }
+
+  async findOpcoesDeFiltro(): Promise<OpcoesDeFiltro> {
+    const prisma = this.resolveClient();
+
+    const [marcas, grupos, familias, linhas, tiposPreco] = await Promise.all([
+      prisma.salesEntry.groupBy({ by: ['marca'], where: { marca: { not: null } } }),
+      prisma.salesEntry.groupBy({ by: ['grupo'], where: { grupo: { not: null } } }),
+      prisma.salesEntry.groupBy({ by: ['familia'], where: { familia: { not: null } } }),
+      prisma.salesEntry.groupBy({ by: ['linha'], where: { linha: { not: null } } }),
+      prisma.salesEntry.groupBy({ by: ['tipoPreco'], where: { tipoPreco: { not: null } } }),
+    ]);
+
+    const toSortedList = (values: (string | null)[]): string[] =>
+      values.filter((v): v is string => v !== null).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+    return {
+      marcas: toSortedList(marcas.map((g) => g.marca)),
+      grupos: toSortedList(grupos.map((g) => g.grupo)),
+      familias: toSortedList(familias.map((g) => g.familia)),
+      linhas: toSortedList(linhas.map((g) => g.linha)),
+      tiposPreco: toSortedList(tiposPreco.map((g) => g.tipoPreco)),
+    };
   }
 }
 

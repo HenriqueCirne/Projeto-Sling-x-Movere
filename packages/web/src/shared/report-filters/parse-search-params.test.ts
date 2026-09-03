@@ -36,6 +36,32 @@ describe('parseReportFilterSearchParams', () => {
     const result = parseReportFilterSearchParams({});
 
     expect(result.valid).toBe(true);
-    expect(result.filter).toEqual({ dataInicial: undefined, dataFinal: undefined, loja: undefined });
+    expect(result.filter).toEqual({
+      dataInicial: undefined,
+      dataFinal: undefined,
+      loja: undefined,
+      marca: undefined,
+      grupo: undefined,
+      familia: undefined,
+      linha: undefined,
+      tipoPreco: undefined,
+    });
+  });
+
+  it('extrai marca/grupo/familia/linha/tipoPreco da URL', () => {
+    const result = parseReportFilterSearchParams({
+      marca: 'Marca X',
+      grupo: 'Grupo X',
+      familia: 'Familia X',
+      linha: 'Linha X',
+      tipoPreco: 'VAREJO',
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.filter.marca).toBe('Marca X');
+    expect(result.filter.grupo).toBe('Grupo X');
+    expect(result.filter.familia).toBe('Familia X');
+    expect(result.filter.linha).toBe('Linha X');
+    expect(result.filter.tipoPreco).toBe('VAREJO');
   });
 });

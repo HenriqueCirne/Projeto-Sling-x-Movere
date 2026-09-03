@@ -3,6 +3,7 @@ import { labelOrNaoInformado } from '@/shared/reports/labels';
 
 import type {
   VendasPorItemContract,
+  VendasPorItemOpcoesDeFiltro,
   VendasPorItemPorLojaRow,
   VendasPorItemResumoRow,
   VendasPorItemRow,
@@ -66,6 +67,10 @@ export class VendasPorItemService implements VendasPorItemContract {
       quantidade: g.quantidade,
       faturamento: g.faturamento,
     }));
+  }
+
+  async getOpcoesDeFiltro(): Promise<VendasPorItemOpcoesDeFiltro> {
+    return this.repository.findOpcoesDeFiltro();
   }
 }
 

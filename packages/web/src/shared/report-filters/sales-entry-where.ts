@@ -19,5 +19,10 @@ export function buildSalesEntryWhere(filter: ReportFilter): Prisma.SalesEntryWhe
         }
       : {}),
     ...(filter.loja ? { loja: filter.loja } : {}),
+    ...(filter.marca ? { marca: filter.marca } : {}),
+    ...(filter.grupo ? { grupo: filter.grupo } : {}),
+    ...(filter.familia ? { familia: filter.familia } : {}),
+    ...(filter.linha ? { linha: filter.linha } : {}),
+    ...(filter.tipoPreco ? { tipoPreco: filter.tipoPreco } : {}),
   };
 }
